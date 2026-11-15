@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useApp, type Route } from "../lib/store";
 import { DOMAINS, type Domain } from "../lib/data";
+import { deriveHealthDomains } from "../lib/healthDomains";
 import Overview from "../pages/Overview";
 import Profiles from "../pages/Profiles";
 import Datasets from "../pages/Datasets";
@@ -272,7 +273,7 @@ function MiniBars({ data, color, labels }: { data: number[]; color: string; labe
         {data.map((v, i) => (
           <div
             key={i}
-            className="flex-1 rounded-t-md"
+            className="flex-1 rounded-t-md transition-[height] duration-500 ease-out"
             style={{
               height: `${12 + ((v - lo) / (hi - lo || 1)) * 88}%`,
               background: color,
@@ -361,8 +362,9 @@ function DomainCard({
   );
 }
 
-/** Per-domain snapshots (simulated, fixed values). */
-function DomainPanels() {
+/** Per-domain snapshots, updated from the latest real .joblib result. */
+function DomainPanels({ result }: { result: UploadAnalysis | null }) {
+  const panels = useMemo(() => deriveHealthDomains(result), [result]);
   return (
     <div>
       <p className="font-mono mb-5 text-[11px] tracking-[0.14em] text-[#8E8E93]">HEALTH DOMAINS</p>
@@ -370,51 +372,43 @@ function DomainPanels() {
         <DomainCard
           color="#4DA3FF"
           title="Radiation"
-          big="0.52"
+          big={panels.radiation.big}
           unit="mSv/day"
           stats={[
-            ["7-DAY TOTAL", "3.67 mSv"],
-            ["SAA PASSES TODAY", "6"],
+            ["7-DAY TOTAL", panels.radiation.weekTotal],
+            ["SAA PASSES TODAY", panels.radiation.saaPasses],
           ]}
-          note="Cabin environment, not personal absorbed dose."
+          note={panels.radiation.note}
         >
-          <MiniBars
-            data={[0.49, 0.52, 0.55, 0.5, 0.58, 0.51, 0.52]}
-            color="#4DA3FF"
-            labels={DAYS}
-          />
+          <MiniBars data={panels.radiation.series} color="#4DA3FF" labels={DAYS} />
         </DomainCard>
 
         <DomainCard
           color="#35D6C0"
           title="Musculoskeletal"
-          big="96"
+          big={panels.musculoskeletal.big}
           unit="% strength retained"
           stats={[
-            ["BONE DENSITY", "-0.4% / month"],
-            ["SESSIONS THIS WEEK", "6"],
+            ["BONE DENSITY", panels.musculoskeletal.boneDensity],
+            ["SESSIONS THIS WEEK", panels.musculoskeletal.sessions],
           ]}
-          note="Simulated trend over the last 8 weeks."
+          note={panels.musculoskeletal.note}
         >
-          <MiniLine
-            data={[100, 99.4, 98.9, 98.3, 97.9, 97.2, 96.8, 96.4]}
-            color="#35D6C0"
-            id="musc-fill"
-          />
+          <MiniLine data={panels.musculoskeletal.series} color="#35D6C0" id="musc-fill" />
         </DomainCard>
 
         <DomainCard
           color="#9B8CFF"
           title="Vestibular"
-          big="1.8"
+          big={panels.vestibular.big}
           unit="cm postural sway"
           stats={[
-            ["GAZE STABILITY", "94%"],
-            ["MOTION SICKNESS", "None reported"],
+            ["GAZE STABILITY", panels.vestibular.gazeStability],
+            ["MOTION SICKNESS", panels.vestibular.motionSickness],
           ]}
-          note="Sway has settled over the last 7 days."
+          note={panels.vestibular.note}
         >
-          <MiniLine data={[2.4, 2.2, 2.1, 1.9, 1.9, 1.8, 1.8]} color="#9B8CFF" id="vest-fill" />
+          <MiniLine data={panels.vestibular.series} color="#9B8CFF" id="vest-fill" />
         </DomainCard>
       </div>
     </div>
@@ -818,7 +812,7 @@ export default function OnePage({ children }: { children?: ReactNode }) {
           <section className="pb-16 pt-12">
             <DatasetUploadBar onResult={handleUploadResult} onReview={() => setAnomalyOpen(true)} />
             <div className="mt-6">
-              <DomainPanels />
+              <DomainPanels result={latest?.result ?? null} />
             </div>
             <div className="mt-14">
               <Vitals
