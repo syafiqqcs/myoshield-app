@@ -843,6 +843,133 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
   }
 }
 
+/* ---- Floating AI companion & guided tour ---- */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+.companion-float {
+  animation: float 4.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes companion-halo {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.08);
+  }
+}
+.companion-halo {
+  animation: companion-halo 4.8s ease-in-out infinite;
+}
+
+@keyframes companion-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.companion-orbit {
+  animation: companion-orbit 18s linear infinite;
+}
+.companion-orbit-reverse {
+  animation: companion-orbit 27s linear infinite reverse;
+}
+
+@keyframes companion-scan {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: translateX(-2px);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateX(2px);
+  }
+}
+.companion-scan {
+  animation: companion-scan 2.6s ease-in-out infinite;
+}
+
+@keyframes companion-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.companion-bubble-in {
+  animation: companion-bubble-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes companion-tour-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 204, 0, 0.5),
+      0 0 26px rgba(255, 204, 0, 0.14);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(255, 204, 0, 0.85),
+      0 0 46px rgba(255, 204, 0, 0.3);
+  }
+}
+.companion-tour-target {
+  border-radius: 3px;
+  animation: companion-tour-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes companion-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 204, 0, 0);
+  }
+  16% {
+    box-shadow:
+      0 0 0 2px rgba(255, 204, 0, 0.92),
+      0 0 46px rgba(255, 204, 0, 0.34);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 204, 0, 0),
+      0 0 0 rgba(255, 204, 0, 0);
+  }
+}
+.companion-pulse {
+  border-radius: 3px;
+  animation: companion-pulse 2.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-float,
+  .companion-halo,
+  .companion-orbit,
+  .companion-orbit-reverse,
+  .companion-scan,
+  .companion-bubble-in,
+  .companion-tour-target,
+  .companion-pulse {
+    animation: none;
+  }
+  .companion-tour-target {
+    box-shadow:
+      0 0 0 1px rgba(255, 204, 0, 0.7),
+      0 0 30px rgba(255, 204, 0, 0.2);
+  }
+}
+
 /* ---- Critical anomaly pop-up ---- */
 @keyframes anomaly-glow {
   0%,

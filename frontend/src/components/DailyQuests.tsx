@@ -1,22 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import Myo3D from "./Myo3D";
 
-type Quest = { id: string; title: string; detail: string; xp: number };
+export type DailyQuest = { id: string; title: string; detail: string; xp: number };
 
 // Daily routine. Durations follow typical ISS crew exercise blocks; this is a gamified demo, not medical advice.
-const QUESTS: Quest[] = [
+export const DAILY_QUESTS: DailyQuest[] = [
   { id: "ared", title: "Resistive exercise", detail: "30 min strength block", xp: 30 },
   { id: "cardio", title: "Treadmill cardio", detail: "30 min harnessed run", xp: 30 },
   { id: "bike", title: "Cycle ergometer", detail: "20 min steady ride", xp: 20 },
   { id: "balance", title: "Balance and gaze drills", detail: "10 min vestibular work", xp: 10 },
   { id: "stretch", title: "Core and stretch", detail: "10 min mobility", xp: 10 },
 ];
+const QUESTS = DAILY_QUESTS;
 const TOTAL_XP = QUESTS.reduce((n, q) => n + q.xp, 0);
 
 type Store = { date: string; done: string[]; history: string[] };
 const KEY = "myoshield-daily-quests";
 
-const dayKey = (d = new Date()) =>
+/** Read by the floating companion so its Daily Quest bubble always matches this panel. */
+export const DAILY_QUESTS_KEY = KEY;
+/** Fired in-tab whenever the quest state changes; the companion listens for it. */
+export const DAILY_QUESTS_EVENT = "myoshield:daily-quests";
+
+export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const shift = (n: number) => {
   const d = new Date();
@@ -67,8 +73,7 @@ function Mascot({ mood }: { mood: Mood }) {
         mood === "energetic" ? "border-[#FFCC00]" : "border-white/[0.08]"
       }`}
       style={{
-        background:
-          "radial-gradient(80% 70% at 50% 35%, #1C1C1F 0%, #121214 55%, #0B0B0C 100%)",
+        background: "radial-gradient(80% 70% at 50% 35%, #1C1C1F 0%, #121214 55%, #0B0B0C 100%)",
       }}
       role="img"
       aria-label={`3D mascot, mood: ${MOODS[mood].label.toLowerCase()}. Drag to rotate.`}
@@ -105,6 +110,7 @@ export default function DailyQuests() {
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(state));
+    window.dispatchEvent(new CustomEvent(DAILY_QUESTS_EVENT, { detail: state }));
   }, [state]);
 
   const toggle = (id: string) =>

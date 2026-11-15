@@ -16,6 +16,7 @@ import FlightSurgeonChat from "./FlightSurgeonChat";
 import AnomalyPopupModal from "./AnomalyPopupModal";
 import MissionReportModal from "./MissionReportModal";
 import AudioAlertToggle from "./AudioAlertToggle";
+import CompanionMascot from "./CompanionMascot";
 import { Icon, Logo } from "./ui";
 import type {
   ChatAstronaut,
@@ -809,12 +810,44 @@ export default function OnePage({ children }: { children?: ReactNode }) {
         </header>
 
         <main className="mx-auto max-w-[1200px] px-5 md:px-8">
-          <section className="pb-16 pt-12">
-            <DatasetUploadBar onResult={handleUploadResult} onReview={() => setAnomalyOpen(true)} />
-            <div className="mt-6">
+          <div
+            id="sec-hero"
+            className="flex scroll-mt-24 flex-wrap items-end justify-between gap-4 pb-6 pt-10"
+          >
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#8E8E93]">
+                MISSION CONTROL · {subjectId}
+              </p>
+              <p className="serif mt-2 text-[28px] leading-none text-[#FFFFFF] sm:text-[34px]">
+                {role === "Astronaut" ? "Crew health uplink." : "Flight surgeon console."}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono inline-flex items-center gap-2 rounded-[2px] border border-white/[0.08] bg-[#121214] px-3 py-1.5 text-[9px] uppercase tracking-[0.12em] text-[#8E8E93]">
+                <i
+                  className={`h-1.5 w-1.5 rounded-full ${latest ? "live-dot bg-[#35D6C0]" : "bg-[#F2B84B]"}`}
+                  style={{ boxShadow: latest ? "0 0 8px #35D6C0" : "0 0 8px #F2B84B" }}
+                />
+                MODEL STATUS · 4 DOMAIN MODELS {latest ? "LIVE" : "STANDBY"}
+              </span>
+              <span className="font-mono rounded-[2px] border border-[#FFCC00]/35 bg-[#FFCC00]/[0.06] px-3 py-1.5 text-[9px] uppercase tracking-[0.12em] text-[#FFCC00]">
+                {latest
+                  ? `${latest.result.interaction_type} · READINESS ${latest.result.mission_readiness_score.toFixed(0)}%`
+                  : "AWAITING TELEMETRY"}
+              </span>
+            </div>
+          </div>
+          <section id="sec-top" className="scroll-mt-24 pb-16">
+            <div id="sec-upload" className="scroll-mt-24">
+              <DatasetUploadBar
+                onResult={handleUploadResult}
+                onReview={() => setAnomalyOpen(true)}
+              />
+            </div>
+            <div id="sec-domains" className="mt-6 scroll-mt-24">
               <DomainPanels result={latest?.result ?? null} />
             </div>
-            <div className="mt-14">
+            <div id="sec-vitals" className="mt-14 scroll-mt-24">
               <Vitals
                 subjectId={subjectId}
                 vitals={vitals}
@@ -869,6 +902,7 @@ export default function OnePage({ children }: { children?: ReactNode }) {
         onClose={() => setAnomalyOpen(false)}
       />
       <MissionReportModal />
+      <CompanionMascot suppressed={chatOpen} />
 
       {children}
     </>
