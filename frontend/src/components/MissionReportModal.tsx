@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useApp } from "../lib/store";
-import { cancelAlertAudio, triggerAnalysisAlert } from "../lib/audioAlerts";
+import { alertMessageFor, cancelAlertAudio } from "../lib/audioAlerts";
+import { useAlertLoop } from "../lib/useAlertLoop";
 import {
   buildMissionReport,
   classificationToneFor,
@@ -151,12 +152,6 @@ function DomainPanel({ domain }: { domain: ReportDomain }) {
 export default function MissionReportModal() {
   const { reportRequest, closeReport, subjects, latestBySubject, notify } = useApp();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const lastAlert = useRef<string | null>(null);
-
-  const handleClose = useCallback(() => {
-    cancelAlertAudio();
-    closeReport();
-  }, [closeReport]);
 
   const snapshot = reportRequest
     ? (reportRequest.snapshot ?? latestBySubject[reportRequest.subjectId] ?? null)
@@ -171,20 +166,22 @@ export default function MissionReportModal() {
     });
   }, [reportRequest, snapshot, subjects]);
 
-  // A live report carrying a warning/critical classification gets the same
+  // A live report carrying a warning/critical classification loops the same
   // spacecraft chime + spoken alert as the rescue overlay. Baseline reports
   // and nominal results stay silent.
-  useEffect(() => {
-    if (!reportRequest || !snapshot) {
-      lastAlert.current = null;
-      return;
-    }
-    const result = snapshot.result;
-    const key = `${snapshot.at}|${result.analysis_id}|${result.status}|${result.interaction_type}`;
-    if (lastAlert.current === key) return;
-    lastAlert.current = key;
-    triggerAnalysisAlert(result);
-  }, [reportRequest, snapshot]);
+  const alertMessage = useMemo(
+    () =>
+      reportRequest && snapshot
+        ? alertMessageFor(snapshot.result, report?.protocol)
+        : null,
+    [reportRequest, snapshot, report],
+  );
+  const stopAlertLoop = useAlertLoop(Boolean(reportRequest && snapshot), alertMessage);
+
+  const handleClose = useCallback(() => {
+    stopAlertLoop();
+    closeReport();
+  }, [closeReport, stopAlertLoop]);
 
   useEffect(() => {
     if (!reportRequest) return;

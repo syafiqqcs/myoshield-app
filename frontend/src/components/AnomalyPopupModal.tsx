@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DomainKey, UploadAnalysis } from "../lib/api";
-import { cancelAlertAudio, triggerAnalysisAlert } from "../lib/audioAlerts";
+import { alertMessageFor, cancelAlertAudio } from "../lib/audioAlerts";
+import { useAlertLoop } from "../lib/useAlertLoop";
 
 const DOMAIN_META: Record<string, { label: string; short: string; color: string; module: string }> =
   {
@@ -113,30 +114,36 @@ export default function AnomalyPopupModal({
   onClose: () => void;
 }) {
   const [checked, setChecked] = useState<boolean[]>([false, false, false]);
-  const lastAlert = useRef<string | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  const primaryDomain = String(result?.primary_domain || "cardiovascular");
+  const meta = DOMAIN_META[primaryDomain] ?? DOMAIN_META.cardiovascular;
+  const affectedModule = result?.affected_module || meta.module;
+
+  // The checklist actually shown in the overlay is also the spoken protocol.
+  const steps = useMemo(() => {
+    if (!open || !result) return [];
+    const protocol = result.protocol_steps?.length
+      ? result.protocol_steps
+      : fallbackSteps(primaryDomain, affectedModule);
+    return protocol.slice(0, 3);
+  }, [open, result, primaryDomain, affectedModule]);
+
+  const alertMessage = useMemo(
+    () => (open && result ? alertMessageFor(result, steps) : null),
+    [open, result, steps],
+  );
+  const stopAlertLoop = useAlertLoop(open && Boolean(result), alertMessage);
+
   const handleClose = useCallback(() => {
-    cancelAlertAudio();
+    stopAlertLoop();
     onCloseRef.current();
-  }, []);
+  }, [stopAlertLoop]);
 
   useEffect(() => {
     if (open) setChecked([false, false, false]);
   }, [open, result?.analysis_id]);
-
-  // Spacecraft chime + spoken warning whenever a non-nominal rescue overlay opens.
-  useEffect(() => {
-    if (!open || !result) {
-      lastAlert.current = null;
-      return;
-    }
-    const key = `${result.analysis_id}|${result.status}|${result.interaction_type}|${result.integrated_strain_index}`;
-    if (lastAlert.current === key) return;
-    lastAlert.current = key;
-    triggerAnalysisAlert(result);
-  }, [open, result]);
 
   useEffect(() => {
     if (!open) return;
@@ -157,14 +164,6 @@ export default function AnomalyPopupModal({
 
   const interaction = String(result.interaction_type || "ADDITIVE").toUpperCase();
   const interactionStyle = INTERACTION_STYLE[interaction] ?? INTERACTION_STYLE.ADDITIVE;
-  const primaryDomain = String(result.primary_domain || "cardiovascular");
-  const meta = DOMAIN_META[primaryDomain] ?? DOMAIN_META.cardiovascular;
-  const affectedModule = result.affected_module || meta.module;
-  const steps = (
-    result.protocol_steps?.length
-      ? result.protocol_steps
-      : fallbackSteps(primaryDomain, affectedModule)
-  ).slice(0, 3);
   const checkedCount = checked.filter(Boolean).length;
   const datasetName = result.filename || filename || "uploaded_dataset";
   const domainScores = result.domain_scores ?? {

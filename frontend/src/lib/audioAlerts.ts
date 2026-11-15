@@ -20,11 +20,35 @@ const ALERT_MESSAGE: Record<TelemetryAlertLevel, string> = {
 const CHIME_MS = 440;
 const STORAGE_KEY = "myoshield.audioAlerts.muted";
 
+/** Minimal shape shared by the rescue overlay and mission report protocols. */
+export type AlertActionStep = {
+  title?: string | null;
+  detail?: string | null;
+};
+
+const STEP_WORDS = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+];
+
+const FALLBACK_ACTIONS =
+  "Follow the on-screen rescue checklist, verify the crew member's vital signs, and report to Mission Control.";
+
+
 let muted = false;
 let mutedReady = false;
 let audioContext: AudioContext | null = null;
 let activeOscillators: OscillatorNode[] = [];
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+let speechSettled: (() => void) | null = null;
 let alertToken = 0;
 let unlockInstalled = false;
 
@@ -133,6 +157,10 @@ export function cancelAlertAudio() {
   alertToken += 1;
   stopChime();
   currentUtterance = null;
+  // Resolve any in-flight speech promise so a cancelled loop can never
+  // resume when the utterance's onend never fires.
+  speechSettled?.();
+  speechSettled = null;
   if (hasWindow() && "speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();
@@ -142,8 +170,8 @@ export function cancelAlertAudio() {
   }
 }
 
-async function playChime() {
-  if (!hasWindow() || isAudioMuted()) return;
+async function playChime(token: number): Promise<void> {
+  if (!hasWindow() || isAudioMuted() || token !== alertToken) return;
   const ctx = getAudioContext();
   if (!ctx) return;
   if (ctx.state === "suspended") {
@@ -153,7 +181,7 @@ async function playChime() {
       return;
     }
   }
-  if (ctx.state !== "running") return;
+  if (ctx.state !== "running" || token !== alertToken) return;
 
   const now = ctx.currentTime;
   const master = ctx.createGain();
@@ -181,6 +209,10 @@ async function playChime() {
   // Two-tone descending telemetry pulse: 880 Hz → 660 Hz.
   tone(880, now, 0.15);
   tone(660, now + 0.19, 0.23);
+
+  // Hold the caller until both tones have fully decayed so the spoken warning
+  // can never start on top of the chime.
+  await new Promise((resolve) => window.setTimeout(resolve, CHIME_MS));
 }
 
 function pickVoice() {
@@ -200,27 +232,54 @@ function pickVoice() {
   );
 }
 
-function speak(message: string, token: number) {
-  if (!hasWindow() || isAudioMuted() || token !== alertToken) return;
-  if (!("speechSynthesis" in window)) return;
-  const synth = window.speechSynthesis;
-  synth.cancel();
-  const utterance = new SpeechSynthesisUtterance(message);
-  utterance.pitch = 0.9;
-  utterance.rate = 1.05;
-  utterance.volume = 0.95;
-  const voice = pickVoice();
-  if (voice) {
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-  } else {
-    utterance.lang = "en-US";
-  }
-  currentUtterance = utterance;
-  utterance.onend = () => {
-    if (currentUtterance === utterance) currentUtterance = null;
-  };
-  synth.speak(utterance);
+function speak(message: string, token: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!hasWindow() || isAudioMuted() || token !== alertToken) {
+      resolve();
+      return;
+    }
+    if (!("speechSynthesis" in window)) {
+      resolve();
+      return;
+    }
+    const synth = window.speechSynthesis;
+    // Only cancel when we actually own an in-flight utterance. Calling
+    // cancel() immediately before speak() makes Chrome silently drop the
+    // new utterance, which would stall the loop.
+    if (currentUtterance) {
+      try {
+        synth.cancel();
+      } catch {
+        // Ignore browsers that reject the call.
+      }
+    }
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.pitch = 0.9;
+    utterance.rate = 1.05;
+    utterance.volume = 0.95;
+    const voice = pickVoice();
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-US";
+    }
+
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      if (speechSettled === done) speechSettled = null;
+      if (currentUtterance === utterance) currentUtterance = null;
+      resolve();
+    };
+
+    currentUtterance = utterance;
+    speechSettled = done;
+    utterance.onend = done;
+    utterance.onerror = done;
+    synth.speak(utterance);
+  });
 }
 
 function playSequence(message: string) {
@@ -228,10 +287,21 @@ function playSequence(message: string) {
   cancelAlertAudio();
   const token = alertToken;
   void (async () => {
-    await playChime();
-    await new Promise((resolve) => window.setTimeout(resolve, CHIME_MS));
-    speak(message, token);
+    await playChime(token);
+    await speak(message, token);
   })();
+}
+
+/**
+ * Play one iteration of the alert chime + spoken warning and resolve when the
+ * voice has finished. The caller owns looping/cancellation.
+ */
+export async function playAlertSequence(message: string): Promise<void> {
+  if (!hasWindow() || isAudioMuted()) return;
+  const token = alertToken;
+  await playChime(token);
+  if (token !== alertToken || isAudioMuted()) return;
+  await speak(message, token);
 }
 
 /**
@@ -273,11 +343,79 @@ export function alertLevelFor(result: UploadAnalysis | null | undefined): Teleme
   return null;
 }
 
-/** Fire the chime + voice alert for an analysis result, if it is not nominal. */
-export function triggerAnalysisAlert(result: UploadAnalysis | null | undefined) {
+/** Normalise UI copy into clean speech: strip markup and break clauses into pauses. */
+function cleanSpeech(value: string | null | undefined): string {
+  if (!value) return "";
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[*_`#]+/g, " ")
+    .replace(/(\d)\s*[–—-]\s*(?=\d)/g, "$1 to ")
+    .replace(/₂/g, "2")
+    .replace(/…/g, ", ")
+    .replace(/\s*[;:]\s*/g, ". ")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,.;:!?]+/, "")
+    .replace(/[\s,.;:!?]+$/, "")
+    .replace(
+      /(^|[.!?]\s+)([a-z])/g,
+      (_match: string, lead: string, char: string) => `${lead}${char.toUpperCase()}`,
+    )
+    .trim();
+}
+
+/** "one", "two", … for the first ten steps, then plain numbers. */
+function ordinalStep(index: number): string {
+  const word = STEP_WORDS[index];
+  return word ? `Step ${word}` : `Step ${index + 1}`;
+}
+
+/**
+ * Compose the spoken alert: condition header plus the numbered action steps
+ * currently shown in the rescue/triage checklist.
+ */
+export function buildAlertScript(
+  header: string,
+  steps?: readonly AlertActionStep[] | null,
+): string {
+  const intro = `${cleanSpeech(header)}. Execute immediate crew protocol:`;
+  const actions = (steps ?? [])
+    .map((step) => ({
+      title: cleanSpeech(step?.title),
+      detail: cleanSpeech(step?.detail),
+    }))
+    .filter((step) => step.title || step.detail);
+
+  if (!actions.length) return `${intro} ${FALLBACK_ACTIONS}`;
+
+  const instructions = actions.map((step, index) => {
+    const parts = [step.title && `${step.title}.`, step.detail && `${step.detail}.`].filter(
+      Boolean,
+    );
+    return `${ordinalStep(index)}: ${parts.join(" ")}`;
+  });
+
+  return `${intro} ${instructions.join(" ")}`;
+}
+
+/** The spoken warning + protocol for an analysis result, or null when nominal. */
+export function alertMessageFor(
+  result: UploadAnalysis | null | undefined,
+  steps?: readonly AlertActionStep[] | null,
+): string | null {
   const level = alertLevelFor(result);
-  if (!level) return;
-  playSequence(ALERT_MESSAGE[level]);
+  if (!level) return null;
+  return buildAlertScript(ALERT_MESSAGE[level], steps);
+}
+
+/** Fire the chime + voice alert for an analysis result, if it is not nominal. */
+export function triggerAnalysisAlert(
+  result: UploadAnalysis | null | undefined,
+  steps?: readonly AlertActionStep[] | null,
+) {
+  const message = alertMessageFor(result, steps);
+  if (!message) return;
+  playSequence(message);
 }
 
 /** Used by the top-bar unmute action so the crew can verify the voice path. */
