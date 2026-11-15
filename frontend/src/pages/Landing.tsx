@@ -223,7 +223,7 @@ export default function Landing() {
                   ISS EXPEDITION 74 · CREW TELEMETRY NOMINAL
                 </p>
                 <h1 className="font-bold-sans mt-5 text-[76px] leading-[0.78] tracking-[-0.06em] text-[#FFFFFF] sm:text-[112px] lg:text-[148px]">
-                  Monitor
+                  The Human Frontier
                 </h1>
               </div>
 
