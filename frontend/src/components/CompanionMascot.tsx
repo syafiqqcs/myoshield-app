@@ -5,64 +5,171 @@ import { DAILY_QUESTS, DAILY_QUESTS_EVENT, DAILY_QUESTS_KEY, dayKey } from "./Da
 const TOUR_KEY = "myoshield_tour_completed";
 const TOUR_HIGHLIGHT = "companion-tour-target";
 const TOUR_PULSE = "companion-pulse";
+/** Daily Quest panel: "Keep Myo Energized" (also matched by heading text below). */
+const ENERGY_SECTION_ID = "sec-quests";
 
 type TourStep = {
-  /** Element to bring into view. */
-  section: string;
-  /** Element that receives the glowing ring. */
-  highlight: string;
+  /** Section element that is scrolled to and receives the glowing ring. */
+  id: string;
   kicker: string;
   title: string;
   body: string;
 };
 
-const TOUR_STEPS: TourStep[] = [
-  {
-    section: "sec-hero",
-    highlight: "sec-hero",
-    kicker: "01 · FLIGHT DECK",
+type TourCopy = {
+  label: string;
+  title: string;
+  body: string;
+};
+
+/** Curated narration for the console sections the Space Bear knows by heart. */
+const TOUR_COPY: Record<string, TourCopy> = {
+  "sec-hero": {
+    label: "FLIGHT DECK",
     title: "Mission Control & model status",
     body: "Welcome aboard. This is your live flight deck: astronaut vitals, upload-derived readiness and the four health domains on one console. I'll walk you through the flight sequence.",
   },
-  {
-    section: "sec-upload",
-    highlight: "sec-upload",
-    kicker: "02 · TELEMETRY UPLINK",
+  "sec-upload": {
+    label: "TELEMETRY UPLINK",
     title: "Upload orbital telemetry",
     body: "Drop a mission CSV or JSON here. All four domain models score the same file, then cross-system strain rules decide whether the emergency triage protocol must open. The sample anomaly dataset is a fast demo.",
   },
-  {
-    section: "sec-domains",
-    highlight: "sec-domains",
-    kicker: "03 · HEALTH DOMAINS",
+  "sec-domains": {
+    label: "HEALTH DOMAINS",
     title: "Scan the four health domains",
     body: "Radiation, musculoskeletal, vestibular and cardiovascular panels update from the latest analysis. Watch the risk bars, sparklines and notes for strain building across systems.",
   },
-  {
-    section: "sec-reports",
-    highlight: "sec-reports",
-    kicker: "04 · TRIAGE & REPORTS",
-    title: "Triage, then file the report",
-    body: "Critical uploads surface the rescue protocol. When the dust settles, generate a mission report here, review the findings and share them with the crew. That completes pre-flight.",
+  "sec-vitals": {
+    label: "LIVE VITALS",
+    title: "Crew vitals at a glance",
+    body: "Heart rate, oxygen saturation, temperature and blood pressure sit in the vitals bay. Use them as a quick sanity check against the domain-model risk scores.",
   },
-];
-
-type QuestTarget = { section: string; label: string };
-
-const QUEST_TARGETS: Record<string, QuestTarget> = {
-  ared: { section: "sec-musculoskeletal", label: "Musculoskeletal" },
-  cardio: { section: "sec-cardiovascular", label: "Cardiovascular" },
-  bike: { section: "sec-cardiovascular", label: "Cardiovascular" },
-  balance: { section: "sec-vestibular", label: "Vestibular" },
-  stretch: { section: "sec-musculoskeletal", label: "Musculoskeletal" },
+  "sec-quests": {
+    label: "KEEP MYO ENERGIZED",
+    title: "Keep Myo energized",
+    body: "Daily Quests keep the companion — and the crew routine — in shape. Complete today's blocks to raise energy and build a streak. Tap me any time and I'll bring you back here.",
+  },
+  "sec-coverage": {
+    label: "DATA COVERAGE",
+    title: "Dataset coverage",
+    body: "Each bar counts the datasets loaded for a health domain. A thin or empty bar means the models have less evidence to work with.",
+  },
+  "sec-overview": {
+    label: "OVERVIEW",
+    title: "Mission overview",
+    body: "A roll-up of all four domains: loaded datasets, latest predictions and the current readiness call in one sweep.",
+  },
+  "sec-profiles": {
+    label: "CREW PROFILES",
+    title: "Crew profile records",
+    body: "Subject details, available datasets, health-domain summaries and analysis history for the selected astronaut.",
+  },
+  "sec-datasets": {
+    label: "DATASETS",
+    title: "Dataset library",
+    body: "Browse the study catalogue, variables, sample previews and source citations behind every model input.",
+  },
+  "sec-analysis": {
+    label: "ANALYSIS",
+    title: "Run the analysis pipeline",
+    body: "Upload telemetry, pick a dataset and follow the four-model pipeline from preprocessing through cross-system strain detection.",
+  },
+  "sec-radiation": {
+    label: "RADIATION",
+    title: "Radiation exposure domain",
+    body: "Dose accumulation, shielding context and radiation risk trends. Watch for elevated exposure combined with other domain strain.",
+  },
+  "sec-musculoskeletal": {
+    label: "MUSCULOSKELETAL",
+    title: "Musculoskeletal domain",
+    body: "Strength, bone density and load-bearing signals. Falling performance here often pairs with cardiovascular deconditioning.",
+  },
+  "sec-vestibular": {
+    label: "VESTIBULAR",
+    title: "Vestibular domain",
+    body: "Balance, gaze stability and sensorimotor scores. These track the crew's adaptation to microgravity.",
+  },
+  "sec-cardiovascular": {
+    label: "CARDIOVASCULAR",
+    title: "Cardiovascular domain",
+    body: "Heart-rate response, blood pressure and aerobic capacity. Combine with vitals for the full circulatory picture.",
+  },
+  "sec-intelligence": {
+    label: "INTELLIGENCE",
+    title: "Cross-domain intelligence",
+    body: "Integrated analysis compares all four domains, highlights missing information, model uncertainty and follow-up suggestions.",
+  },
+  "sec-reports": {
+    label: "TRIAGE & REPORTS",
+    title: "Triage, then file the report",
+    body: "Critical uploads surface the rescue protocol. When the dust settles, generate a mission report here, review the findings and share them with the crew.",
+  },
+  "sec-settings": {
+    label: "SETTINGS",
+    title: "Console settings",
+    body: "Review datasets, model endpoints, version history and audit activity. That completes the full pre-flight walkthrough.",
+  },
 };
+
+const FALLBACK_IDS = ["sec-hero", "sec-upload", "sec-domains", "sec-vitals", "sec-quests"];
+const FALLBACK_STEPS: TourStep[] = FALLBACK_IDS.map((id, index) => ({
+  id,
+  kicker: `${String(index + 1).padStart(2, "0")} · ${TOUR_COPY[id].label}`,
+  title: TOUR_COPY[id].title,
+  body: TOUR_COPY[id].body,
+}));
+
+/**
+ * Walk every section currently mounted in the console, in document order.
+ * New/role-specific sections are picked up automatically, so the tour always
+ * covers the whole site instead of a stale hard-coded list.
+ */
+function discoverTourSteps(): TourStep[] {
+  if (typeof document === "undefined") return FALLBACK_STEPS;
+
+  const seen = new Set<string>();
+  const steps: TourStep[] = [];
+
+  document.querySelectorAll<HTMLElement>("main [id^='sec-']").forEach((el) => {
+    const id = el.id;
+    if (id === "sec-top" || seen.has(id) || el.getClientRects().length === 0) return;
+    seen.add(id);
+
+    const copy = TOUR_COPY[id];
+    const label = id.replace(/^sec-/, "").replace(/-/g, " ");
+    const heading = el.querySelector("h1, h2, h3")?.textContent?.trim();
+
+    steps.push({
+      id,
+      kicker: `${String(steps.length + 1).padStart(2, "0")} · ${
+        copy?.label ?? label.toUpperCase()
+      }`,
+      title: copy?.title ?? heading ?? label,
+      body:
+        copy?.body ??
+        `Part of your mission console. Scroll through ${label} to review the latest data before moving on.`,
+    });
+  });
+
+  return steps.length ? steps : FALLBACK_STEPS;
+}
+
+/** Locate the "Keep Myo Energized" panel by ID, then by its heading text. */
+function findEnergySection(): HTMLElement | null {
+  const byId = document.getElementById(ENERGY_SECTION_ID);
+  if (byId) return byId;
+
+  const heading = Array.from(
+    document.querySelectorAll<HTMLElement>("main h1, main h2, main h3"),
+  ).find((el) => /keep\s+myo\s+energi[sz]ed/i.test(el.textContent ?? ""));
+
+  return heading?.closest<HTMLElement>("section") ?? heading?.parentElement ?? null;
+}
 
 type QuestInfo = {
   kicker: string;
   title: string;
   body: string;
-  section: string;
-  targetLabel: string;
   done: number | null;
   total: number;
   complete: boolean;
@@ -85,16 +192,10 @@ function readQuestInfo(hasAnalysis: boolean): QuestInfo {
     const next = DAILY_QUESTS.find((q) => !done.includes(q.id));
 
     if (next) {
-      const target = QUEST_TARGETS[next.id] ?? {
-        section: "sec-quests",
-        label: "Daily Quests",
-      };
       return {
         kicker: `DAILY QUEST · ${done.length}/${total}`,
         title: next.title,
-        body: `${next.detail}. Tap to jump to the ${target.label} domain.`,
-        section: target.section,
-        targetLabel: target.label,
+        body: `${next.detail}. Tap to open Keep Myo Energized and log today's routine.`,
         done: done.length,
         total,
         complete: false,
@@ -105,8 +206,6 @@ function readQuestInfo(hasAnalysis: boolean): QuestInfo {
       kicker: "DAILY QUEST · COMPLETE",
       title: "All quests complete",
       body: "Today's routine is logged. Sweep the health domains for late strain signals while I recharge.",
-      section: "sec-domains",
-      targetLabel: "Health Domains",
       done: total,
       total,
       complete: true,
@@ -118,8 +217,6 @@ function readQuestInfo(hasAnalysis: boolean): QuestInfo {
       kicker: "DAILY QUEST",
       title: "Review health domains",
       body: "Review Radiation & Musculoskeletal health domains before the next status sync.",
-      section: "sec-domains",
-      targetLabel: "Health Domains",
       done: null,
       total,
       complete: false,
@@ -130,8 +227,6 @@ function readQuestInfo(hasAnalysis: boolean): QuestInfo {
     kicker: "DAILY QUEST",
     title: "Run 4-model diagnostics",
     body: "Upload orbital telemetry CSV to score all four health domains and surface cross-system strain.",
-    section: "sec-upload",
-    targetLabel: "Telemetry Uploader",
     done: null,
     total,
     complete: false,
@@ -149,13 +244,16 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
   const [quest, setQuest] = useState<QuestInfo>(() => readQuestInfo(!!latest));
   const [completed, setCompleted] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+  const [steps, setSteps] = useState<TourStep[]>(FALLBACK_STEPS);
   const [step, setStep] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const pulseTimer = useRef<number | null>(null);
 
-  /* First visit: reveal the flight guide after the dashboard has settled. */
+  /* First visit: discover every section on the page, then reveal the flight guide. */
   useEffect(() => {
+    setSteps(discoverTourSteps());
+
     let stored = false;
     try {
       stored = localStorage.getItem(TOUR_KEY) === "true";
@@ -190,22 +288,22 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
   /* Scroll to the active tour step and ring the matching section. */
   useEffect(() => {
     if (!tourActive) return;
-    const current = TOUR_STEPS[step];
+    const current = steps[step];
+    if (!current) return;
+
     clearTourHighlight();
-    const highlight = document.getElementById(current.highlight);
-    highlight?.classList.add(TOUR_HIGHLIGHT);
+    const target = document.getElementById(current.id);
+    target?.classList.add(TOUR_HIGHLIGHT);
 
     const timer = window.setTimeout(() => {
-      document
-        .getElementById(current.section)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 90);
 
     return () => {
       window.clearTimeout(timer);
-      highlight?.classList.remove(TOUR_HIGHLIGHT);
+      target?.classList.remove(TOUR_HIGHLIGHT);
     };
-  }, [tourActive, step]);
+  }, [tourActive, step, steps]);
 
   /* Clean up transient DOM highlights if the companion unmounts. */
   useEffect(
@@ -216,6 +314,26 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
     },
     [],
   );
+
+  const pulseAndScroll = useCallback((el: HTMLElement) => {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove(TOUR_PULSE);
+    // Restart the pulse when the same section is clicked twice.
+    void el.offsetWidth;
+    el.classList.add(TOUR_PULSE);
+
+    if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => {
+      el.classList.remove(TOUR_PULSE);
+      pulseTimer.current = null;
+    }, 2400);
+  }, []);
+
+  /* Post-tour mascot click: jump straight to the "Keep Myo Energized" panel. */
+  const jumpToEnergy = useCallback(() => {
+    const el = findEnergySection();
+    if (el) pulseAndScroll(el);
+  }, [pulseAndScroll]);
 
   const finishTour = useCallback(
     (reason: "skip" | "done") => {
@@ -233,40 +351,26 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
           ? "Tour complete · Daily Quest mode online"
           : "Tour skipped · Daily Quest mode online",
       );
+      // A completed tour ends by handing the astronaut to the daily quest panel.
+      if (reason === "done") window.setTimeout(jumpToEnergy, 420);
     },
-    [notify],
+    [jumpToEnergy, notify],
   );
 
   const startTour = useCallback(() => {
+    setSteps(discoverTourSteps());
     setCollapsed(false);
     setStep(0);
     setTourActive(true);
   }, []);
 
   const nextStep = useCallback(() => {
-    if (step >= TOUR_STEPS.length - 1) finishTour("done");
+    if (step >= steps.length - 1) finishTour("done");
     else setStep((n) => n + 1);
-  }, [step, finishTour]);
+  }, [step, steps.length, finishTour]);
 
-  const jumpTo = useCallback((section: string) => {
-    const el = document.getElementById(section);
-    if (!el) return;
-
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.remove(TOUR_PULSE);
-    // Restart the pulse when the same section is clicked twice.
-    void el.offsetWidth;
-    el.classList.add(TOUR_PULSE);
-
-    if (pulseTimer.current !== null) window.clearTimeout(pulseTimer.current);
-    pulseTimer.current = window.setTimeout(() => {
-      el.classList.remove(TOUR_PULSE);
-      pulseTimer.current = null;
-    }, 2400);
-  }, []);
-
-  const current = TOUR_STEPS[step];
-  const lastStep = step === TOUR_STEPS.length - 1;
+  const current = steps[step] ?? steps[0] ?? FALLBACK_STEPS[0];
+  const lastStep = step >= steps.length - 1;
   const progress = quest.total ? Math.round(((quest.done ?? 0) / quest.total) * 100) : 0;
 
   // Keep the companion clear of the flight-surgeon drawer and modal dialogs.
@@ -276,13 +380,13 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
   const awake = tourActive || hovered || alertActive;
 
   return (
-    <div className="no-print pointer-events-none fixed bottom-0 left-4 z-50">
+    <div className="no-print pointer-events-none fixed bottom-0 right-6 z-50">
       <div className="relative flex items-end">
-        {/* Speech bubble floats above and slightly right of the helmet; tail points back to the bear. */}
+        {/* Speech bubble sits above and slightly left of the helmet; tail points down-right at the bear. */}
         {tourActive ? (
           <div
             aria-live="polite"
-            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] left-[4.75rem] w-[calc(100vw-6.5rem)] max-w-[336px] rounded-[14px] border border-[#FFCC00]/40 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl sm:bottom-[11.5rem]"
+            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] right-6 w-[calc(100vw-5rem)] max-w-[336px] rounded-[14px] border border-[#FFCC00]/40 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl sm:bottom-[11.5rem]"
             style={{
               boxShadow:
                 "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05)",
@@ -295,7 +399,7 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
                   MYO · {current.kicker}
                 </span>
                 <span className="font-mono shrink-0 rounded-[2px] border border-white/[0.12] px-2 py-0.5 text-[9px] tabular-nums text-[#D6D6D9]">
-                  {step + 1}/{TOUR_STEPS.length}
+                  {step + 1}/{steps.length}
                 </span>
               </div>
 
@@ -305,7 +409,7 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
               <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{current.body}</p>
 
               <div className="mt-3 flex gap-1" aria-hidden>
-                {TOUR_STEPS.map((_, i) => (
+                {steps.map((_, i) => (
                   <span
                     key={i}
                     className="h-[3px] flex-1 rounded-full transition-colors duration-300"
@@ -349,11 +453,11 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
         ) : !collapsed ? (
           <div
             aria-live="polite"
-            title={`Jump to ${quest.targetLabel}`}
-            onClick={() => jumpTo(quest.section)}
+            title="Jump to Keep Myo Energized"
+            onClick={jumpToEnergy}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] left-[4.75rem] w-[calc(100vw-6.5rem)] max-w-[336px] cursor-pointer rounded-[14px] border border-[#FFCC00]/30 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition hover:border-[#FFCC00]/60 sm:bottom-[11.5rem]"
+            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] right-6 w-[calc(100vw-5rem)] max-w-[336px] cursor-pointer rounded-[14px] border border-[#FFCC00]/30 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition hover:border-[#FFCC00]/60 sm:bottom-[11.5rem]"
             style={{
               boxShadow:
                 "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
@@ -398,7 +502,7 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
                 </div>
               )}
 
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
                 <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6E6E73]">
                   {quest.complete ? "Mission logged" : "Tap to navigate"}
                 </span>
@@ -406,42 +510,18 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    jumpTo(quest.section);
+                    jumpToEnergy();
                   }}
                   className="font-mono inline-flex items-center gap-1.5 rounded-[2px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#FFCC00] transition hover:brightness-110"
                 >
-                  {quest.targetLabel} <ArrowIcon />
+                  Keep Myo Energized <ArrowIcon />
                 </button>
               </div>
             </div>
           </div>
         ) : null}
 
-        <button
-          type="button"
-          onClick={() => {
-            if (!tourActive) jumpTo(quest.section);
-          }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          onFocus={() => setHovered(true)}
-          onBlur={() => setHovered(false)}
-          aria-label={
-            tourActive
-              ? "MYO Space Bear guided tour in progress"
-              : `Ask MYO Space Bear to open ${quest.targetLabel}`
-          }
-          title={tourActive ? "MYO · guided tour" : `Jump to ${quest.targetLabel}`}
-          className="group pointer-events-auto relative block h-[178px] w-[128px] select-none rounded-2xl focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FFCC00]/70 sm:h-[196px] sm:w-[140px]"
-        >
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-[16%] h-24 w-24 -translate-x-1/2 rounded-full bg-[#FFCC00]/10 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100 group-focus-visible:opacity-100"
-          />
-          <SpaceBearSvg awake={awake} />
-        </button>
-
-        <div className="pointer-events-auto mb-7 ml-0.5 flex flex-col items-center gap-1.5">
+        <div className="pointer-events-auto mb-7 mr-1 flex flex-col items-center gap-1.5">
           {!tourActive && collapsed && (
             <button
               type="button"
@@ -460,12 +540,36 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
               onClick={startTour}
               aria-label="Replay guided tour"
               title="Replay Tour"
-              className="font-mono grid h-8 w-8 place-items-center rounded-full border border-white/[0.14] bg-[#0B0B0C]/90 text-[11px] font-bold text-[#D6D6D9] backdrop-blur-md transition hover:border-[#FFCC00]/60 hover:text-[#FFCC00]"
+              className="font-mono grid h-8 w-8 place-items-center rounded-full border border-white/[0.14] bg-[#0B0B0C]/90 text-[13px] font-bold text-[#D6D6D9] backdrop-blur-md transition hover:border-[#FFCC00]/60 hover:text-[#FFCC00]"
             >
-              ?
+              ↻
             </button>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (!tourActive) jumpToEnergy();
+          }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onFocus={() => setHovered(true)}
+          onBlur={() => setHovered(false)}
+          aria-label={
+            tourActive
+              ? "MYO Space Bear guided tour in progress"
+              : "Ask MYO Space Bear to open Keep Myo Energized"
+          }
+          title={tourActive ? "MYO · guided tour" : "Jump to Keep Myo Energized"}
+          className="group pointer-events-auto relative block h-[178px] w-[128px] select-none rounded-2xl focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FFCC00]/70 sm:h-[196px] sm:w-[140px]"
+        >
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[16%] h-24 w-24 -translate-x-1/2 rounded-full bg-[#FFCC00]/10 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100 group-focus-visible:opacity-100"
+          />
+          <SpaceBearSvg awake={awake} />
+        </button>
       </div>
     </div>
   );
@@ -475,7 +579,7 @@ function BubbleTail() {
   return (
     <span
       aria-hidden
-      className="absolute -bottom-[7px] left-6 h-3 w-3 rotate-45 rounded-[2px] border-b border-l border-[#FFCC00]/40 bg-[#0E0E10]"
+      className="absolute -bottom-[7px] right-16 h-3 w-3 rotate-[35deg] rounded-[2px] border-b border-r border-[#FFCC00]/40 bg-[#0E0E10]"
     />
   );
 }

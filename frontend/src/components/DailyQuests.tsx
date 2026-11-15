@@ -152,7 +152,7 @@ export default function DailyQuests() {
         <div>
           <p className="font-mono text-[11px] tracking-[0.14em] text-[#FFCC00]">DAILY QUESTS</p>
           <h2 className="serif mt-3 text-[48px] leading-none text-[#FFFFFF]">
-            Keep Myo energised.
+            Keep Myo energized.
           </h2>
           <p className="mt-3 max-w-[520px] text-[15px] text-[#8E8E93]">
             Finish today's workout routine. If you skip it, your companion gets tired.

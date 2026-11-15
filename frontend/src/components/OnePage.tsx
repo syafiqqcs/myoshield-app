@@ -865,7 +865,10 @@ export default function OnePage({ children }: { children?: ReactNode }) {
             <DailyQuests />
           </section>
 
-          <section className="border-t border-[rgba(255,255,255,0.08)] py-14">
+          <section
+            id="sec-coverage"
+            className="scroll-mt-20 border-t border-[rgba(255,255,255,0.08)] py-14"
+          >
             <Coverage />
           </section>
 
