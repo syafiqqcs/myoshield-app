@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useApp } from "../lib/store";
+import { isCriticalAnalysis, useApp } from "../lib/store";
 import { DAILY_QUESTS, DAILY_QUESTS_EVENT, DAILY_QUESTS_KEY, dayKey } from "./DailyQuests";
 
 const TOUR_KEY = "myoshield_tour_completed";
@@ -151,6 +151,7 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
   const [tourActive, setTourActive] = useState(false);
   const [step, setStep] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const pulseTimer = useRef<number | null>(null);
 
   /* First visit: reveal the flight guide after the dashboard has settled. */
@@ -271,146 +272,176 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
   // Keep the companion clear of the flight-surgeon drawer and modal dialogs.
   if (suppressed || anomalyOpen || reportRequest) return null;
 
+  const alertActive = !!latest && isCriticalAnalysis(latest.result);
+  const awake = tourActive || hovered || alertActive;
+
   return (
-    <div className="no-print pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {tourActive ? (
-        <div
-          aria-live="polite"
-          className="companion-bubble-in pointer-events-auto relative w-[calc(100vw-3rem)] max-w-[336px] rounded-[2px] border border-[#FFCC00]/40 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl"
-          style={{
-            boxShadow:
-              "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05)",
-          }}
-        >
-          <BubbleTail />
-          <div className="fs-scroll max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#FFCC00]">
-                MYO · {current.kicker}
-              </span>
-              <span className="font-mono shrink-0 rounded-[2px] border border-white/[0.12] px-2 py-0.5 text-[9px] tabular-nums text-[#D6D6D9]">
-                {step + 1}/{TOUR_STEPS.length}
-              </span>
-            </div>
+    <div className="no-print pointer-events-none fixed bottom-0 left-4 z-50">
+      <div className="relative flex items-end">
+        {/* Speech bubble floats above and slightly right of the helmet; tail points back to the bear. */}
+        {tourActive ? (
+          <div
+            aria-live="polite"
+            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] left-[4.75rem] w-[calc(100vw-6.5rem)] max-w-[336px] rounded-[14px] border border-[#FFCC00]/40 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl sm:bottom-[11.5rem]"
+            style={{
+              boxShadow:
+                "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.06), inset 0 1px 0 rgba(255,255,255,0.05)",
+            }}
+          >
+            <BubbleTail />
+            <div className="fs-scroll max-h-[calc(100dvh-14rem)] overflow-y-auto overscroll-contain">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#FFCC00]">
+                  MYO · {current.kicker}
+                </span>
+                <span className="font-mono shrink-0 rounded-[2px] border border-white/[0.12] px-2 py-0.5 text-[9px] tabular-nums text-[#D6D6D9]">
+                  {step + 1}/{TOUR_STEPS.length}
+                </span>
+              </div>
 
-            <h3 className="font-bold-sans mt-2 text-[19px] leading-[1.1] tracking-[-0.02em] text-[#FFFFFF]">
-              {current.title}
-            </h3>
-            <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{current.body}</p>
+              <h3 className="font-bold-sans mt-2 text-[19px] leading-[1.1] tracking-[-0.02em] text-[#FFFFFF]">
+                {current.title}
+              </h3>
+              <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{current.body}</p>
 
-            <div className="mt-3 flex gap-1" aria-hidden>
-              {TOUR_STEPS.map((_, i) => (
-                <span
-                  key={i}
-                  className="h-[3px] flex-1 rounded-full transition-colors duration-300"
-                  style={{ background: i <= step ? "#FFCC00" : "rgba(255,255,255,0.12)" }}
-                />
-              ))}
-            </div>
+              <div className="mt-3 flex gap-1" aria-hidden>
+                {TOUR_STEPS.map((_, i) => (
+                  <span
+                    key={i}
+                    className="h-[3px] flex-1 rounded-full transition-colors duration-300"
+                    style={{ background: i <= step ? "#FFCC00" : "rgba(255,255,255,0.12)" }}
+                  />
+                ))}
+              </div>
 
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
-              <button
-                type="button"
-                onClick={() => finishTour("skip")}
-                className="font-mono rounded-[2px] px-1.5 py-1.5 text-[9px] uppercase tracking-[0.12em] text-[#8E8E93] transition hover:text-[#FFFFFF]"
-              >
-                Skip Tour
-              </button>
-              <div className="flex items-center gap-1.5">
-                {step > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setStep((n) => Math.max(0, n - 1))}
-                    className="font-mono inline-flex items-center gap-1 rounded-[2px] border border-white/[0.12] px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#D6D6D9] transition hover:border-[#FFCC00]/50 hover:text-[#FFFFFF]"
-                  >
-                    <ArrowIcon direction="left" />
-                    Back
-                  </button>
-                )}
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
                 <button
                   type="button"
-                  onClick={nextStep}
-                  className="font-mono inline-flex items-center gap-1.5 rounded-[2px] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] transition hover:brightness-110"
-                  style={{ background: "#FFCC00", color: "#0B0B0C" }}
+                  onClick={() => finishTour("skip")}
+                  className="font-mono rounded-[2px] px-1.5 py-1.5 text-[9px] uppercase tracking-[0.12em] text-[#8E8E93] transition hover:text-[#FFFFFF]"
                 >
-                  {lastStep ? "Finish" : "Next"}
-                  {!lastStep && <ArrowIcon />}
+                  Skip Tour
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {step > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setStep((n) => Math.max(0, n - 1))}
+                      className="font-mono inline-flex items-center gap-1 rounded-[2px] border border-white/[0.12] px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#D6D6D9] transition hover:border-[#FFCC00]/50 hover:text-[#FFFFFF]"
+                    >
+                      <ArrowIcon direction="left" />
+                      Back
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="font-mono inline-flex items-center gap-1.5 rounded-[2px] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.1em] transition hover:brightness-110"
+                    style={{ background: "#FFCC00", color: "#0B0B0C" }}
+                  >
+                    {lastStep ? "Finish" : "Next"}
+                    {!lastStep && <ArrowIcon />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : !collapsed ? (
+          <div
+            aria-live="polite"
+            title={`Jump to ${quest.targetLabel}`}
+            onClick={() => jumpTo(quest.section)}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] left-[4.75rem] w-[calc(100vw-6.5rem)] max-w-[336px] cursor-pointer rounded-[14px] border border-[#FFCC00]/30 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition hover:border-[#FFCC00]/60 sm:bottom-[11.5rem]"
+            style={{
+              boxShadow:
+                "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+            }}
+          >
+            <BubbleTail />
+            <div className="fs-scroll max-h-[calc(100dvh-14rem)] overflow-y-auto overscroll-contain">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#FFCC00]">
+                  MYO · {quest.kicker}
+                </span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setCollapsed(true);
+                  }}
+                  aria-label="Minimize companion message"
+                  title="Minimize message"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-[2px] border border-white/[0.1] text-[#8E8E93] transition hover:border-[#FFCC00]/50 hover:text-[#FFFFFF]"
+                >
+                  <MinimizeIcon />
+                </button>
+              </div>
+
+              <h3 className="font-bold-sans mt-2 text-[18px] leading-[1.1] tracking-[-0.02em] text-[#FFFFFF]">
+                {quest.title}
+              </h3>
+              <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{quest.body}</p>
+
+              {quest.done !== null && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-white/[0.09]">
+                    <div
+                      className="h-full rounded-full bg-[#FFCC00] transition-[width] duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-[9px] tabular-nums text-[#6E6E73]">
+                    {quest.done}/{quest.total}
+                  </span>
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6E6E73]">
+                  {quest.complete ? "Mission logged" : "Tap to navigate"}
+                </span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    jumpTo(quest.section);
+                  }}
+                  className="font-mono inline-flex items-center gap-1.5 rounded-[2px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#FFCC00] transition hover:brightness-110"
+                >
+                  {quest.targetLabel} <ArrowIcon />
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      ) : !collapsed ? (
-        <div
-          aria-live="polite"
-          title={`Jump to ${quest.targetLabel}`}
-          onClick={() => jumpTo(quest.section)}
-          className="companion-bubble-in pointer-events-auto relative w-[calc(100vw-3rem)] max-w-[336px] cursor-pointer rounded-[2px] border border-[#FFCC00]/30 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition hover:border-[#FFCC00]/60"
-          style={{
-            boxShadow:
-              "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (!tourActive) jumpTo(quest.section);
           }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onFocus={() => setHovered(true)}
+          onBlur={() => setHovered(false)}
+          aria-label={
+            tourActive
+              ? "MYO Space Bear guided tour in progress"
+              : `Ask MYO Space Bear to open ${quest.targetLabel}`
+          }
+          title={tourActive ? "MYO · guided tour" : `Jump to ${quest.targetLabel}`}
+          className="group pointer-events-auto relative block h-[178px] w-[128px] select-none rounded-2xl focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FFCC00]/70 sm:h-[196px] sm:w-[140px]"
         >
-          <BubbleTail />
-          <div className="fs-scroll max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#FFCC00]">
-                MYO · {quest.kicker}
-              </span>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setCollapsed(true);
-                }}
-                aria-label="Minimize companion message"
-                title="Minimize message"
-                className="grid h-6 w-6 shrink-0 place-items-center rounded-[2px] border border-white/[0.1] text-[#8E8E93] transition hover:border-[#FFCC00]/50 hover:text-[#FFFFFF]"
-              >
-                <MinimizeIcon />
-              </button>
-            </div>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[16%] h-24 w-24 -translate-x-1/2 rounded-full bg-[#FFCC00]/10 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100 group-focus-visible:opacity-100"
+          />
+          <SpaceBearSvg awake={awake} />
+        </button>
 
-            <h3 className="font-bold-sans mt-2 text-[18px] leading-[1.1] tracking-[-0.02em] text-[#FFFFFF]">
-              {quest.title}
-            </h3>
-            <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{quest.body}</p>
-
-            {quest.done !== null && (
-              <div className="mt-3 flex items-center gap-2">
-                <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-white/[0.09]">
-                  <div
-                    className="h-full rounded-full bg-[#FFCC00] transition-[width] duration-500"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <span className="font-mono text-[9px] tabular-nums text-[#6E6E73]">
-                  {quest.done}/{quest.total}
-                </span>
-              </div>
-            )}
-
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
-              <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6E6E73]">
-                {quest.complete ? "Mission logged" : "Tap to navigate"}
-              </span>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  jumpTo(quest.section);
-                }}
-                className="font-mono inline-flex items-center gap-1.5 rounded-[2px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#FFCC00] transition hover:brightness-110"
-              >
-                {quest.targetLabel} <ArrowIcon />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="flex items-end gap-2.5">
-        <div className="pointer-events-auto mb-2 flex flex-col items-center gap-1.5">
+        <div className="pointer-events-auto mb-7 ml-0.5 flex flex-col items-center gap-1.5">
           {!tourActive && collapsed && (
             <button
               type="button"
@@ -435,35 +466,6 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
             </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (!tourActive) jumpTo(quest.section);
-          }}
-          aria-label={
-            tourActive ? "MYO guided tour in progress" : `Ask MYO to open ${quest.targetLabel}`
-          }
-          title={tourActive ? "MYO · guided tour" : `Jump to ${quest.targetLabel}`}
-          className="companion-float pointer-events-auto group relative grid h-[80px] w-[80px] place-items-center rounded-full border border-[#FFCC00]/40 bg-[#0B0B0C]/90 backdrop-blur-md transition hover:border-[#FFCC00] sm:h-[88px] sm:w-[88px]"
-          style={{
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 18px 50px rgba(0,0,0,0.55)",
-          }}
-        >
-          <span
-            aria-hidden
-            className="companion-halo absolute -inset-2 rounded-full bg-[#FFCC00]/20 blur-xl"
-          />
-          <span
-            aria-hidden
-            className="absolute -inset-[5px] rounded-full border border-dashed border-[#FFCC00]/20"
-          />
-          <span aria-hidden className="absolute inset-0 rounded-full border border-white/[0.06]" />
-          <MascotSvg />
-          <span className="font-mono pointer-events-none absolute -bottom-0.5 text-[7px] tracking-[0.22em] text-[#FFCC00]/80">
-            MYO
-          </span>
-        </button>
       </div>
     </div>
   );
@@ -473,163 +475,625 @@ function BubbleTail() {
   return (
     <span
       aria-hidden
-      className="absolute -bottom-[7px] right-7 h-3 w-3 rotate-45 border-b border-r border-[#FFCC00]/40 bg-[#0E0E10]"
+      className="absolute -bottom-[7px] left-6 h-3 w-3 rotate-45 rounded-[2px] border-b border-l border-[#FFCC00]/40 bg-[#0E0E10]"
     />
   );
 }
 
-function MascotSvg() {
+/** High-detail 2.5D Space Bear Astronaut matching the interactive Myo3D mascot. */
+function SpaceBearSvg({ awake }: { awake: boolean }) {
   return (
     <svg
-      viewBox="0 0 96 96"
-      className="relative z-10 h-[66px] w-[66px] sm:h-[74px] sm:w-[74px]"
+      viewBox="0 0 200 288"
+      className={`space-bear-svg relative z-10 h-full w-full ${awake ? "is-awake" : "is-sleepy"}`}
       aria-hidden
     >
       <defs>
-        <radialGradient id="cp-body" cx="50%" cy="34%" r="72%">
-          <stop offset="0%" stopColor="#25252B" />
-          <stop offset="58%" stopColor="#121214" />
-          <stop offset="100%" stopColor="#08080A" />
+        <linearGradient id="sb-fur" x1="0" y1="0" x2="0.85" y2="1">
+          <stop offset="0%" stopColor="#D8A16F" />
+          <stop offset="42%" stopColor="#B67C4F" />
+          <stop offset="100%" stopColor="#7E4B2C" />
+        </linearGradient>
+        <linearGradient id="sb-muzzle" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#FBE3C6" />
+          <stop offset="70%" stopColor="#E7C09B" />
+          <stop offset="100%" stopColor="#C99B74" />
+        </linearGradient>
+        <linearGradient id="sb-suit" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="48%" stopColor="#EEF3F8" />
+          <stop offset="100%" stopColor="#BCC7D4" />
+        </linearGradient>
+        <linearGradient id="sb-suit-shade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#E9EFF5" />
+          <stop offset="100%" stopColor="#A6B2C0" />
+        </linearGradient>
+        <linearGradient id="sb-silver" x1="0" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#FBFDFF" />
+          <stop offset="46%" stopColor="#DCE3EA" />
+          <stop offset="100%" stopColor="#A1ADBB" />
+        </linearGradient>
+        <linearGradient id="sb-gold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFEEA8" />
+          <stop offset="42%" stopColor="#FFCC00" />
+          <stop offset="100%" stopColor="#A87900" />
+        </linearGradient>
+        <linearGradient id="sb-tablet" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FFE873" />
+          <stop offset="55%" stopColor="#FFD22E" />
+          <stop offset="100%" stopColor="#E8A800" />
+        </linearGradient>
+        <radialGradient id="sb-glass" cx="38%" cy="28%" r="78%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.34" />
+          <stop offset="45%" stopColor="#DFF4FF" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#9ED4FF" stopOpacity="0.2" />
         </radialGradient>
-        <linearGradient id="cp-visor" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#0A2B2A" />
-          <stop offset="48%" stopColor="#0F4C49" />
-          <stop offset="100%" stopColor="#07100F" />
-        </linearGradient>
-        <linearGradient id="cp-gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFE58A" />
-          <stop offset="45%" stopColor="#FFCC00" />
-          <stop offset="100%" stopColor="#A67C00" />
-        </linearGradient>
-        <filter id="cp-glow" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="1.8" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        <radialGradient id="sb-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.55" />
+          <stop offset="65%" stopColor="#000000" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      {/* Twin orbital rings */}
-      <g className="companion-orbit" style={{ transformOrigin: "48px 48px" }}>
+      {/* Ground shadow keeps the bear planted on the viewport edge. */}
+      <ellipse
+        className="space-bear-shadow"
+        cx="100"
+        cy="282"
+        rx="62"
+        ry="7"
+        fill="url(#sb-shadow)"
+      />
+
+      <g className="space-bear-bob">
+        {/* Life-support pack behind the suit */}
+        <rect
+          x="49"
+          y="171"
+          width="102"
+          height="74"
+          rx="30"
+          fill="url(#sb-suit-shade)"
+          stroke="#93A0AF"
+          strokeWidth="1.2"
+        />
+        <rect
+          x="40"
+          y="181"
+          width="16"
+          height="48"
+          rx="8"
+          fill="url(#sb-silver)"
+          stroke="#7F8B9A"
+          strokeWidth="1"
+        />
+        <rect
+          x="144"
+          y="181"
+          width="16"
+          height="48"
+          rx="8"
+          fill="url(#sb-silver)"
+          stroke="#7F8B9A"
+          strokeWidth="1"
+        />
+        <rect x="43" y="176" width="10" height="8" rx="3" fill="#8E9AA9" />
+        <rect x="147" y="176" width="10" height="8" rx="3" fill="#8E9AA9" />
+
+        {/* Legs and magnetic boots */}
+        <g>
+          <path
+            d="M74 207h20v39c0 8-4 13-10 13s-10-5-10-13z"
+            fill="url(#sb-suit)"
+            stroke="#AAB6C4"
+            strokeWidth="1.2"
+          />
+          <rect
+            x="61"
+            y="247"
+            width="36"
+            height="37"
+            rx="13"
+            fill="url(#sb-silver)"
+            stroke="#8793A2"
+            strokeWidth="1.2"
+          />
+          <rect x="63" y="275" width="32" height="8" rx="4" fill="#697585" />
+          <path
+            d="M68 255h20"
+            stroke="#FFFFFF"
+            strokeOpacity="0.6"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+        </g>
+        <g>
+          <path
+            d="M106 207h20v39c0 8-4 13-10 13s-10-5-10-13z"
+            fill="url(#sb-suit)"
+            stroke="#AAB6C4"
+            strokeWidth="1.2"
+          />
+          <rect
+            x="103"
+            y="247"
+            width="36"
+            height="37"
+            rx="13"
+            fill="url(#sb-silver)"
+            stroke="#8793A2"
+            strokeWidth="1.2"
+          />
+          <rect x="105" y="275" width="32" height="8" rx="4" fill="#697585" />
+          <path
+            d="M110 255h20"
+            stroke="#FFFFFF"
+            strokeOpacity="0.6"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+        </g>
+
+        {/* Torso */}
+        <path
+          d="M64 158c-9 10-12 28-8 48l4 18c18 8 62 8 80 0l4-18c4-20 1-38-8-48-20-8-52-8-72 0Z"
+          fill="url(#sb-suit)"
+          stroke="#AEBAC8"
+          strokeWidth="1.3"
+        />
+        <path
+          d="M124 154c11 10 15 29 11 49l-3 17c-6 3-13 5-20 6 8-9 11-27 10-43-1-13-4-22-9-28 4 0 8 0 11-1Z"
+          fill="#8E9BAA"
+          fillOpacity="0.12"
+        />
+        <path d="M100 153v72" stroke="#C9D3DF" strokeWidth="1" />
+        <path
+          d="M76 161c-4 23-6 44-3 64M124 161c4 23 6 44 3 64"
+          stroke="#D5DDE6"
+          strokeWidth="1"
+          fill="none"
+        />
+
+        {/* Chest badge, patch and status module */}
+        <circle cx="79" cy="180" r="11" fill="url(#sb-gold)" stroke="#967000" strokeWidth="1" />
+        <circle
+          cx="79"
+          cy="180"
+          r="7.2"
+          fill="none"
+          stroke="#7C5A00"
+          strokeOpacity="0.65"
+          strokeWidth="0.9"
+        />
+        <path
+          d="m79 174.4 1.7 4.1 4.4.4-3.3 2.9 1 4.3-3.8-2.2-3.8 2.2 1-4.3-3.3-2.9 4.4-.4Z"
+          fill="#7C5A00"
+          fillOpacity="0.8"
+        />
+        <rect
+          x="103"
+          y="172.5"
+          width="26"
+          height="10"
+          rx="2"
+          fill="#DCE4ED"
+          stroke="#A4B0BF"
+          strokeWidth="0.9"
+        />
+        <text
+          x="116"
+          y="180"
+          textAnchor="middle"
+          fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+          fontSize="6.4"
+          fontWeight="700"
+          letterSpacing="0.4"
+          fill="#34404F"
+        >
+          MYO
+        </text>
+        <rect
+          x="91"
+          y="193"
+          width="18"
+          height="8"
+          rx="2"
+          fill="#2A3340"
+          stroke="#A4B0BF"
+          strokeWidth="0.8"
+        />
+        <circle cx="95" cy="197" r="1.4" fill="#35D6C0" />
+        <rect x="99" y="196.2" width="4.5" height="1.6" rx="0.8" fill="#FFCC00" />
+        <rect x="104.5" y="196.2" width="2.2" height="1.6" rx="0.8" fill="#9B8CFF" />
+
+        {/* Utility belt */}
+        <rect x="58" y="212" width="84" height="12" rx="6" fill="#707D8D" />
+        <rect
+          x="90"
+          y="209.5"
+          width="20"
+          height="17"
+          rx="4"
+          fill="url(#sb-gold)"
+          stroke="#8C6800"
+          strokeWidth="1"
+        />
+        <rect x="95" y="214" width="10" height="8" rx="1.5" fill="#6B5000" fillOpacity="0.65" />
+
+        {/* Shoulder pads */}
         <ellipse
-          cx="48"
-          cy="48"
-          rx="43"
-          ry="15"
+          cx="66"
+          cy="163"
+          rx="15"
+          ry="12"
+          fill="url(#sb-silver)"
+          stroke="#8C98A7"
+          strokeWidth="1"
+          transform="rotate(-18 66 163)"
+        />
+        <ellipse
+          cx="134"
+          cy="163"
+          rx="15"
+          ry="12"
+          fill="url(#sb-silver)"
+          stroke="#8C98A7"
+          strokeWidth="1"
+          transform="rotate(18 134 163)"
+        />
+
+        {/* Right arm (viewer left) hanging at ease */}
+        <path
+          d="M66 168c-7 13-11 28-13 39"
+          fill="none"
+          stroke="#A5B1BF"
+          strokeWidth="19"
+          strokeLinecap="round"
+        />
+        <path
+          d="M66 168c-7 13-11 28-13 39"
+          fill="none"
+          stroke="#F2F6FA"
+          strokeWidth="15.5"
+          strokeLinecap="round"
+        />
+        <ellipse cx="53" cy="205" rx="9.5" ry="5" fill="#B9C4D0" transform="rotate(12 53 205)" />
+        <circle cx="51.5" cy="214" r="9.5" fill="url(#sb-silver)" stroke="#8B97A6" />
+        <path
+          d="M45 214q6.5 4.2 13 0"
+          fill="none"
+          stroke="#7F8B9A"
+          strokeWidth="1.1"
+          strokeLinecap="round"
+        />
+
+        {/* Left arm (viewer right) bent around the yellow tablet */}
+        <path
+          d="M134 168c9 11 15 24 14 34"
+          fill="none"
+          stroke="#A5B1BF"
+          strokeWidth="19"
+          strokeLinecap="round"
+        />
+        <path
+          d="M134 168c9 11 15 24 14 34"
+          fill="none"
+          stroke="#F2F6FA"
+          strokeWidth="15.5"
+          strokeLinecap="round"
+        />
+
+        {/* Yellow clipboard / tablet */}
+        <g transform="rotate(-9 146 214)">
+          <rect
+            x="124"
+            y="194"
+            width="42"
+            height="58"
+            rx="6"
+            fill="#C79600"
+            stroke="#7A5A00"
+            strokeWidth="1.4"
+          />
+          <rect
+            x="127.5"
+            y="198"
+            width="35"
+            height="50"
+            rx="4"
+            fill="url(#sb-tablet)"
+            stroke="#9C7400"
+            strokeWidth="1"
+          />
+          <rect x="137" y="190" width="16" height="8" rx="4" fill="#6F5200" />
+          <path
+            d="M134 208h22M134 216h18M134 224h21M134 232h14"
+            stroke="#8A6500"
+            strokeOpacity="0.55"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="m131.5 205.5 2 2 3.5-4M131.5 213.5l2 2 3.5-4"
+            fill="none"
+            stroke="#365324"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+        <ellipse cx="148" cy="201" rx="9" ry="5" fill="#B9C4D0" transform="rotate(-18 148 201)" />
+        <circle cx="147" cy="211" r="9.5" fill="url(#sb-silver)" stroke="#8B97A6" />
+        <path
+          d="M140 209q6-4 12 0"
+          fill="none"
+          stroke="#7F8B9A"
+          strokeWidth="1.1"
+          strokeLinecap="round"
+        />
+
+        {/* Bear head */}
+        <g className="space-bear-head">
+          <circle cx="64" cy="62" r="18" fill="url(#sb-fur)" stroke="#6F4529" strokeWidth="1.2" />
+          <circle cx="64" cy="63" r="9.5" fill="#C9806E" fillOpacity="0.88" />
+          <path
+            d="M56 58q8-5 16 0"
+            fill="none"
+            stroke="#F3C4AA"
+            strokeOpacity="0.4"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <circle cx="136" cy="62" r="18" fill="url(#sb-fur)" stroke="#6F4529" strokeWidth="1.2" />
+          <circle cx="136" cy="63" r="9.5" fill="#C9806E" fillOpacity="0.88" />
+          <path
+            d="M128 58q8-5 16 0"
+            fill="none"
+            stroke="#F3C4AA"
+            strokeOpacity="0.4"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+
+          <ellipse cx="100" cy="98" rx="45" ry="42" fill="url(#sb-fur)" />
+          <path
+            d="M63 111c8 19 22 27 37 27s29-8 37-27c-4 22-18 31-37 31s-33-9-37-31Z"
+            fill="#5C361F"
+            fillOpacity="0.14"
+          />
+          <path
+            d="M72 64c5-8 13-13 22-14"
+            fill="none"
+            stroke="#F0BB91"
+            strokeOpacity="0.35"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+
+          {/* Muzzle, nose, sleepy smile and tiny fangs */}
+          <ellipse
+            cx="100"
+            cy="116"
+            rx="24"
+            ry="17"
+            fill="url(#sb-muzzle)"
+            stroke="#C79B72"
+            strokeWidth="1"
+          />
+          <ellipse cx="100" cy="108.5" rx="5.6" ry="4.6" fill="#3A2418" />
+          <ellipse cx="98" cy="106.7" rx="1.6" ry="1" fill="#FFFFFF" fillOpacity="0.55" />
+          <path
+            d="M94 117q6 6 12 0"
+            fill="none"
+            stroke="#4A2D1A"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path d="M94 120.5h3.2l-1.6 5Z" fill="#FFFFFF" />
+          <path d="M102.8 120.5h3.2L104.4 125.5Z" fill="#FFFFFF" />
+          <ellipse cx="69" cy="113" rx="9.5" ry="6" fill="#EE8B86" fillOpacity="0.55" />
+          <ellipse cx="131" cy="113" rx="9.5" ry="6" fill="#EE8B86" fillOpacity="0.55" />
+
+          {/* Eyes: attentive during the tour, heavy-lidded when idle */}
+          <g
+            className="sb-awake-eyes"
+            style={{ opacity: awake ? 1 : 0, transition: "opacity 220ms ease" }}
+          >
+            <ellipse cx="82" cy="95" rx="7.5" ry="8.5" fill="#2B1B12" />
+            <ellipse cx="118" cy="95" rx="7.5" ry="8.5" fill="#2B1B12" />
+            <circle cx="84.5" cy="92" r="2.4" fill="#FFFFFF" />
+            <circle cx="120.5" cy="92" r="2.4" fill="#FFFFFF" />
+            <circle cx="79.5" cy="98.5" r="1.1" fill="#FFFFFF" fillOpacity="0.7" />
+            <circle cx="115.5" cy="98.5" r="1.1" fill="#FFFFFF" fillOpacity="0.7" />
+            <path
+              d="M74 84q8-4 16 0M110 84q8-4 16 0"
+              fill="none"
+              stroke="#6A4227"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+            />
+          </g>
+          <g
+            className="sb-sleepy-eyes"
+            style={{ opacity: awake ? 0 : 1, transition: "opacity 220ms ease" }}
+          >
+            <ellipse cx="82" cy="97" rx="7" ry="4.2" fill="#2B1B12" />
+            <ellipse cx="118" cy="97" rx="7" ry="4.2" fill="#2B1B12" />
+            <path
+              d="M73 96q9-5.5 18 0M109 96q9-5.5 18 0"
+              fill="none"
+              stroke="#4B2E1C"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M74 101q8 3 16 0M110 101q8 3 16 0"
+              fill="none"
+              stroke="#6A4227"
+              strokeOpacity="0.55"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <circle cx="84" cy="97.5" r="1" fill="#FFFFFF" fillOpacity="0.55" />
+            <circle cx="120" cy="97.5" r="1" fill="#FFFFFF" fillOpacity="0.55" />
+          </g>
+        </g>
+
+        {/* Clear glass dome helmet */}
+        <circle
+          cx="100"
+          cy="95"
+          r="66"
+          fill="url(#sb-glass)"
+          stroke="#DFF2FF"
+          strokeOpacity="0.75"
+          strokeWidth="2"
+        />
+        <circle
+          cx="100"
+          cy="95"
+          r="62"
+          fill="none"
+          stroke="#FFFFFF"
+          strokeOpacity="0.13"
+          strokeWidth="1"
+        />
+        <path
+          d="M53 63C62 46 78 36 95 34"
+          fill="none"
+          stroke="#FFFFFF"
+          strokeOpacity="0.75"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
+        <ellipse
+          cx="124"
+          cy="51"
+          rx="13"
+          ry="4.6"
+          fill="#FFFFFF"
+          fillOpacity="0.22"
+          transform="rotate(39 124 51)"
+        />
+        <path
+          d="M159 108c-4 23-21 40-42 46"
+          fill="none"
+          stroke="#BFE9FF"
+          strokeOpacity="0.26"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+
+        {/* Neck seal */}
+        <ellipse
+          cx="100"
+          cy="158"
+          rx="42"
+          ry="14"
+          fill="url(#sb-silver)"
+          stroke="#8592A2"
+          strokeWidth="1.3"
+        />
+        <ellipse cx="100" cy="155" rx="34" ry="9" fill="#5E6B7C" />
+        <path
+          d="M61 157q39 12 78 0"
           fill="none"
           stroke="#FFCC00"
-          strokeOpacity="0.38"
-          strokeWidth="1"
-          strokeDasharray="3 5"
-          transform="rotate(-18 48 48)"
+          strokeOpacity="0.55"
+          strokeWidth="2"
+          strokeLinecap="round"
         />
-        <circle cx="9.5" cy="55" r="2" fill="#FFCC00" filter="url(#cp-glow)" />
-        <circle cx="86.5" cy="41" r="1.3" fill="#FFCC00" opacity="0.8" />
-      </g>
-      <g className="companion-orbit-reverse" style={{ transformOrigin: "48px 48px" }}>
-        <ellipse
-          cx="48"
-          cy="48"
-          rx="39"
-          ry="12"
-          fill="none"
-          stroke="#35D6C0"
-          strokeOpacity="0.32"
-          strokeWidth="1"
-          transform="rotate(58 48 48)"
+
+        {/* Side ear-caps / comms pods */}
+        <rect
+          x="21"
+          y="80"
+          width="19"
+          height="42"
+          rx="9.5"
+          fill="url(#sb-silver)"
+          stroke="#8592A2"
+          strokeWidth="1.3"
         />
-        <circle cx="17" cy="22" r="1.6" fill="#35D6C0" filter="url(#cp-glow)" />
-      </g>
+        <rect x="25" y="86" width="11" height="7" rx="3.5" fill="url(#sb-gold)" />
+        <circle cx="30.5" cy="107" r="4.8" fill="#2C8C9C" stroke="#EFFFFF" strokeWidth="1" />
+        <rect
+          x="38"
+          y="94"
+          width="8"
+          height="14"
+          rx="3"
+          fill="#B7C2CF"
+          stroke="#8592A2"
+          strokeWidth="1"
+        />
+        <rect
+          x="160"
+          y="80"
+          width="19"
+          height="42"
+          rx="9.5"
+          fill="url(#sb-silver)"
+          stroke="#8592A2"
+          strokeWidth="1.3"
+        />
+        <rect x="164" y="86" width="11" height="7" rx="3.5" fill="url(#sb-gold)" />
+        <circle cx="169.5" cy="107" r="4.8" fill="#2C8C9C" stroke="#EFFFFF" strokeWidth="1" />
+        <rect
+          x="154"
+          y="94"
+          width="8"
+          height="14"
+          rx="3"
+          fill="#B7C2CF"
+          stroke="#8592A2"
+          strokeWidth="1"
+        />
 
-      {/* Antenna */}
-      <path d="M48 27V19" stroke="url(#cp-gold)" strokeWidth="1.4" strokeLinecap="round" />
-      <circle cx="48" cy="16.5" r="2.2" fill="#FFCC00" filter="url(#cp-glow)" />
-
-      {/* Companion shell */}
-      <circle
-        cx="48"
-        cy="47"
-        r="26"
-        fill="url(#cp-body)"
-        stroke="#FFCC00"
-        strokeOpacity="0.55"
-        strokeWidth="1.2"
-      />
-      <path
-        d="M25 47c0-4 3-8 8-10M71 47c0-4-3-8-8-10"
-        fill="none"
-        stroke="#FFFFFF"
-        strokeOpacity="0.12"
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
-
-      {/* Side thruster pods */}
-      <rect x="18.5" y="42" width="4.5" height="11" rx="1.4" fill="#FFCC00" opacity="0.55" />
-      <rect x="73" y="42" width="4.5" height="11" rx="1.4" fill="#FFCC00" opacity="0.55" />
-      <rect x="18.5" y="46.5" width="4.5" height="2" rx="1" fill="#0B0B0C" opacity="0.7" />
-      <rect x="73" y="46.5" width="4.5" height="2" rx="1" fill="#0B0B0C" opacity="0.7" />
-
-      {/* Helmet */}
-      <circle cx="48" cy="43" r="18.5" fill="#0E0E10" stroke="url(#cp-gold)" strokeWidth="1.7" />
-      <path
-        d="M33.5 40.5c1.2-6.2 7.3-10.2 14.5-10.2s13.3 4 14.5 10.2v5.2c0 6.6-6.5 11.8-14.5 11.8s-14.5-5.2-14.5-11.8z"
-        fill="url(#cp-visor)"
-        stroke="#35D6C0"
-        strokeOpacity="0.45"
-        strokeWidth="1"
-      />
-      {/* Visor reflection + scanning line */}
-      <path
-        d="M37 36.5c2.3-2.4 6-3.8 9.7-3.8"
-        stroke="#DFFFFA"
-        strokeOpacity="0.32"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M35 47.5h26"
-        stroke="#7DFFF0"
-        strokeOpacity="0.55"
-        strokeWidth="0.9"
-        strokeDasharray="2 3"
-        className="companion-scan"
-      />
-      {/* Telemetry eyes */}
-      <circle cx="42" cy="42.5" r="1.7" fill="#9CFFF4" filter="url(#cp-glow)" />
-      <circle cx="54" cy="42.5" r="1.7" fill="#9CFFF4" filter="url(#cp-glow)" />
-      <path
-        d="M43.5 50.5c1.4 1.2 3 1.8 4.5 1.8s3.1-.6 4.5-1.8"
-        fill="none"
-        stroke="#9CFFF4"
-        strokeOpacity="0.55"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-      />
-
-      {/* Chest telemetry module */}
-      <rect
-        x="38"
-        y="62.5"
-        width="20"
-        height="8"
-        rx="1.6"
-        fill="#121214"
-        stroke="#FFCC00"
-        strokeOpacity="0.45"
-      />
-      <rect x="41" y="65.5" width="5" height="1.4" rx="0.7" fill="#35D6C0" />
-      <rect x="47.5" y="65.5" width="4" height="1.4" rx="0.7" fill="#FFCC00" />
-      <rect x="53" y="65.5" width="2.5" height="1.4" rx="0.7" fill="#9B8CFF" />
-      <circle cx="41.5" cy="68.4" r="0.6" fill="#35D6C0" />
-
-      {/* Ambient stars */}
-      <g fill="#FFFFFF">
-        <circle cx="26" cy="20" r="0.8" opacity="0.5" />
-        <circle cx="68" cy="16" r="0.7" opacity="0.35" />
-        <circle cx="80" cy="70" r="0.7" opacity="0.3" />
-        <circle cx="17" cy="72" r="0.9" opacity="0.35" />
+        {/* Idle Zzz particles */}
+        {!awake && (
+          <g className="space-bear-zzz">
+            <g className="sb-zzz">
+              <text
+                x="38"
+                y="68"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fontSize="16"
+                fontWeight="700"
+                fill="#FFE08A"
+                fillOpacity="0.85"
+              >
+                z
+              </text>
+            </g>
+            <g className="sb-zzz sb-zzz-2">
+              <text
+                x="49"
+                y="52"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fontSize="20"
+                fontWeight="700"
+                fill="#FFCC00"
+                fillOpacity="0.9"
+              >
+                Z
+              </text>
+            </g>
+            <g className="sb-zzz sb-zzz-3">
+              <text
+                x="64"
+                y="35"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                fontSize="24"
+                fontWeight="700"
+                fill="#FFF1B8"
+                fillOpacity="0.95"
+              >
+                Z
+              </text>
+            </g>
+          </g>
+        )}
       </g>
     </svg>
   );

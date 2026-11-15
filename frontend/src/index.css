@@ -844,60 +844,104 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
 }
 
 /* ---- Floating AI companion & guided tour ---- */
-@keyframes float {
+/* Space Bear Astronaut mascot: grounded feet, gentle breathing + idle sway. */
+@keyframes space-bear-breathe {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) scale(1, 1);
   }
   50% {
-    transform: translateY(-9px);
+    transform: translateY(0) scale(1.006, 1.014);
   }
 }
-.companion-float {
-  animation: float 4.8s ease-in-out infinite;
+.space-bear-bob {
+  transform-box: view-box;
+  transform-origin: 100px 282px;
+  animation: space-bear-breathe 4.8s ease-in-out infinite;
   will-change: transform;
 }
+.space-bear-svg.is-awake .space-bear-bob {
+  animation-duration: 3.1s;
+}
 
-@keyframes companion-halo {
+@keyframes space-bear-head-sway {
   0%,
   100% {
-    opacity: 0.38;
-    transform: scale(0.92);
+    transform: rotate(-1.1deg) translateY(0);
   }
   50% {
-    opacity: 0.72;
-    transform: scale(1.08);
+    transform: rotate(1.1deg) translateY(-1px);
   }
 }
-.companion-halo {
-  animation: companion-halo 4.8s ease-in-out infinite;
+.space-bear-head {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: space-bear-head-sway 6.4s ease-in-out infinite;
+}
+.space-bear-svg.is-awake .space-bear-head {
+  animation-duration: 3.4s;
 }
 
-@keyframes companion-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.companion-orbit {
-  animation: companion-orbit 18s linear infinite;
-}
-.companion-orbit-reverse {
-  animation: companion-orbit 27s linear infinite reverse;
-}
-
-@keyframes companion-scan {
+@keyframes space-bear-shadow {
   0%,
   100% {
-    opacity: 0.28;
-    transform: translateX(-2px);
+    opacity: 0.6;
+    transform: scaleX(1);
   }
   50% {
+    opacity: 0.42;
+    transform: scaleX(0.94);
+  }
+}
+.space-bear-shadow {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: space-bear-shadow 4.8s ease-in-out infinite;
+}
+
+@keyframes space-bear-blink {
+  0%,
+  91%,
+  100% {
+    transform: scaleY(1);
+  }
+  94%,
+  96% {
+    transform: scaleY(0.08);
+  }
+}
+.space-bear-svg.is-awake .sb-awake-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: space-bear-blink 5.2s ease-in-out infinite;
+}
+
+@keyframes space-bear-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 4px) scale(0.75);
+  }
+  22% {
     opacity: 0.9;
-    transform: translateX(2px);
+  }
+  72% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(7px, -18px) scale(1.06);
   }
 }
-.companion-scan {
-  animation: companion-scan 2.6s ease-in-out infinite;
+.space-bear-zzz .sb-zzz {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: space-bear-zzz 3.8s ease-in-out infinite;
+}
+.space-bear-zzz .sb-zzz-2 {
+  animation-delay: 0.9s;
+}
+.space-bear-zzz .sb-zzz-3 {
+  animation-delay: 1.8s;
 }
 
 @keyframes companion-bubble-in {
@@ -953,11 +997,11 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .companion-float,
-  .companion-halo,
-  .companion-orbit,
-  .companion-orbit-reverse,
-  .companion-scan,
+  .space-bear-bob,
+  .space-bear-head,
+  .space-bear-shadow,
+  .sb-awake-eyes,
+  .space-bear-zzz .sb-zzz,
   .companion-bubble-in,
   .companion-tour-target,
   .companion-pulse {
