@@ -89,6 +89,18 @@ def _load_joblib_models() -> None:
     """Load every *.joblib artifact exactly once and publish load status."""
     global rad_bundle, mus_bundle, ves_bundle, car_bundle, int_bundle
 
+    # Compatibility shim: scikit-learn 1.7+ removed `_RemainderColsList`, which appears
+    # in pickles produced by 1.6.x ColumnTransformer objects. Re-register the name so
+    # older .joblib bundles unpickle cleanly.
+    import sklearn.compose._column_transformer as _ct
+
+    if not hasattr(_ct, "_RemainderColsList"):
+
+        class _RemainderColsList(list):
+            pass
+
+        _ct._RemainderColsList = _RemainderColsList
+
     with MODEL_LOAD_LOCK:
         model_paths = sorted(glob.glob(os.path.join(MODELS_DIR, "*.joblib")))
         if not model_paths:
