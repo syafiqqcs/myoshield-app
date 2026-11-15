@@ -1,0 +1,932 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Crimson Text:Regular";
+  src: url("https://static.figma.com/font/CrimsonText-Regular_2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DM Sans:Regular";
+  src: url("https://static.figma.com/font/DMSans_opsz_wght__1") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DM Sans:Medium";
+  src: url("https://static.figma.com/font/DMSans_opsz_wght__1") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DM Sans:Bold";
+  src: url("https://static.figma.com/font/DMSans_opsz_wght__1") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Roboto Mono:Regular";
+  src: url("https://static.figma.com/font/RobotoMono_wght__2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* ---- NatGeo dark editorial palette ----
+   Carbon canvas, matte panels, gold chrome, teal only for nominal telemetry,
+   crimson only for critical alerts. */
+@theme {
+  --color-mission: #0b0b0c;
+  --color-panel: #121214;
+  --color-panel-2: #17171a;
+  --color-navy: #ffcc00;
+  --color-navy-2: #ffd633;
+  --color-azure: rgba(255, 204, 0, 0.14);
+  --color-azure-soft: rgba(255, 204, 0, 0.06);
+  --color-coral: #f06464;
+  --color-ink: #ffffff;
+  --color-muted: #8e8e93;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-radiation: #4da3ff;
+  --color-musculo: #35d6c0;
+  --color-vestibular: #9b8cff;
+  --color-cardio: #f2b84b;
+  --color-success: #35d6c0;
+  --color-warning: #f5a623;
+  --color-critical: #f06464;
+  --font-serif: "DM Sans:Bold", "DM Sans", system-ui, sans-serif;
+  --font-sans: "DM Sans:Regular", "DM Sans", system-ui, sans-serif;
+  --font-sans-medium: "DM Sans:Medium", "DM Sans", sans-serif;
+  --font-sans-bold: "DM Sans:Bold", "DM Sans", sans-serif;
+  --font-mono: "Roboto Mono:Regular", "Roboto Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+  body {
+    font-family: var(--font-sans);
+    color: #ffffff;
+    background-color: #0b0b0c;
+    background-image:
+      radial-gradient(62% 42% at 82% -12%, rgba(255, 204, 0, 0.055), transparent 66%),
+      radial-gradient(48% 36% at 0% 0%, rgba(255, 255, 255, 0.04), transparent 62%);
+    background-repeat: no-repeat, no-repeat;
+    background-attachment: fixed;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    cursor: pointer;
+  }
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+  ::selection {
+    background: rgba(255, 204, 0, 0.28);
+    color: #ffffff;
+  }
+}
+
+/* Instrument scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #ffcc00;
+  background-clip: content-box;
+}
+
+.font-medium-sans {
+  font-family: var(--font-sans-medium);
+  font-weight: 500;
+}
+.font-bold-sans {
+  font-family: var(--font-sans-bold);
+  font-weight: 700;
+}
+/* Display type: tight, bold editorial sans. */
+.serif {
+  font-family: var(--font-sans-bold);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+/* Uppercase micro-label */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8e8e93;
+}
+
+/* ---- Inputs ---- */
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  background: #121214;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.input:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.input:focus {
+  border-color: rgba(255, 204, 0, 0.8);
+  background: #121214;
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.14);
+}
+.input::placeholder {
+  color: #6e6e73;
+}
+.input:disabled {
+  opacity: 0.6;
+}
+select.input {
+  padding-right: 10px;
+}
+select.input option {
+  background: #121214;
+  color: #ffffff;
+}
+input[type="date"].input::-webkit-calendar-picker-indicator {
+  filter: invert(0.75);
+}
+
+/* ---- Data tables ---- */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.tbl th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8e8e93;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+.tbl td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  vertical-align: top;
+  color: #d6d6d9;
+}
+.tbl tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ---- Motion ---- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.35s ease both;
+}
+
+/* ---- Cinematic landing drawer ---- */
+@keyframes drawer-in {
+  from {
+    opacity: 0.35;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.drawer-in {
+  animation: drawer-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.scrim-in {
+  animation: scrim-in 0.32s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-in,
+  .scrim-in {
+    animation: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 40px 0;
+  }
+}
+.bar-anim {
+  background-image: repeating-linear-gradient(135deg, #ffffff30 0 8px, transparent 8px 16px);
+  background-size: 40px 40px;
+  animation: shimmer 1s linear infinite;
+}
+
+/* Live telemetry pulse — teal is reserved for nominal signal. */
+@keyframes hud-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 214, 192, 0.5);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(53, 214, 192, 0);
+    opacity: 0.72;
+  }
+}
+.live-dot {
+  animation: hud-pulse 2.2s ease-out infinite;
+}
+@keyframes hud-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+.hud-sweep::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 26%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 204, 0, 0.1), transparent);
+  animation: hud-sweep 3.8s ease-in-out infinite;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #0b1a24 !important;
+  }
+  .print-area * {
+    color: #0b1a24 !important;
+    border-color: #cbd5e1 !important;
+  }
+  .print-area svg text {
+    fill: #0b1a24 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+.report-modal {
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.66),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+@keyframes report-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .report-modal {
+    animation: report-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* ---- Mission report modal ----
+   The preview is a dark editorial sheet on screen; print flattens it to a
+   light, paginated document so Save as PDF stays legible even when the
+   browser has "background graphics" switched off. */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* The console sheet behind the report must never bleed into the PDF. */
+  body:has(.report-overlay) .print-area,
+  body:has(.report-overlay) .print-area * {
+    visibility: hidden !important;
+  }
+
+  /* Hidden chrome still takes layout space; drop it so the report starts on
+     page one instead of after a full page of blank dashboard height. */
+  body:has(.report-overlay) .hud,
+  body:has(.report-overlay) aside {
+    display: none !important;
+  }
+
+  .report-overlay,
+  .report-print-area,
+  .report-print-area * {
+    visibility: visible !important;
+  }
+
+  .report-overlay {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .report-modal {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .report-modal > [aria-hidden] {
+    display: none !important;
+  }
+
+  .report-modal-scroll {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .report-print-area {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Flatten the dark sheet: ink stays black, dividers stay hairline grey. */
+  .report-print-area,
+  .report-print-area * {
+    color: #14161a !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    border-color: #c9ced6 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .report-print-area .report-domain {
+    border: 1px solid #c9ced6 !important;
+    margin-bottom: 6mm;
+  }
+
+  .report-print-area .report-domain-bar,
+  .report-print-area .gauge-track > div {
+    background-color: #14161a !important;
+  }
+
+  .report-print-area .gauge-track {
+    background-color: #eceef1 !important;
+  }
+
+  /* Never truncate the interpretation paragraph in the printed sheet. */
+  .report-print-area .line-clamp-3 {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+  }
+
+  .report-print-area .overflow-x-auto,
+  .report-print-area .overflow-hidden,
+  .report-print-area .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  .report-print-area table {
+    width: 100% !important;
+  }
+
+  .report-print-area thead {
+    display: table-header-group;
+  }
+
+  .report-print-area tr,
+  .report-print-area li,
+  .report-print-area .report-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-print-area h1,
+  .report-print-area h2,
+  .report-print-area h3,
+  .report-print-area h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .report-print-area .report-domain {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* ---- Matte editorial surfaces ----
+   Shared by the dashboard shell and any panel that needs the print treatment. */
+.glass-stage {
+  position: relative;
+  isolation: isolate;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #121214;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.glass-card {
+  position: relative;
+  isolation: isolate;
+  background: #121214;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.28s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.glass-card.glass-strong {
+  background: #17171a;
+}
+.glass-card:hover {
+  border-color: rgba(255, 204, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 22px 46px rgba(0, 0, 0, 0.42);
+}
+
+.liquid-glass {
+  position: relative;
+  isolation: isolate;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #121214;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+/* Primary action capsule */
+.glass-azure {
+  position: relative;
+  isolation: isolate;
+  color: #0b0b0c;
+  border: 0;
+  background: #ffcc00;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1.25, 0.36, 1),
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+.glass-azure:hover,
+.glass-azure:focus-visible {
+  background: #ffd633;
+  box-shadow: 0 0 24px rgba(255, 204, 0, 0.32);
+  transform: translateY(-1px);
+}
+.glass-azure:active {
+  transform: translateY(0);
+}
+.glass-azure.glass-clear {
+  background: #121214;
+  color: #d6d6d9;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.glass-azure.glass-clear:hover {
+  border-color: rgba(255, 204, 0, 0.5);
+  color: #ffffff;
+  background: rgba(255, 204, 0, 0.06);
+}
+
+/* Navigation pill that follows the cursor */
+.lg-pill {
+  isolation: isolate;
+  color: #ffffff;
+  background-color: rgba(255, 204, 0, 0.08);
+  border: 1px solid rgba(255, 204, 0, 0.32);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.lg-pill.lg-cta {
+  background-color: rgba(255, 204, 0, 0.18);
+}
+
+/* Gold halo behind the primary call to action */
+.neon-wrap {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+}
+.neon-glow {
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: #ffcc00;
+  opacity: 0;
+  scale: 0.9;
+  filter: blur(16px);
+  box-shadow:
+    0 0 24px 6px rgba(255, 204, 0, 0.5),
+    0 0 66px 20px rgba(255, 204, 0, 0.28),
+    0 0 120px 42px rgba(255, 204, 0, 0.16);
+  transition:
+    opacity 0.35s ease,
+    scale 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.neon-wrap:hover .neon-glow,
+.neon-wrap:focus-within .neon-glow {
+  opacity: 1;
+  scale: 1.12;
+}
+
+/* PIN entry error motion */
+@keyframes pin-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-9px);
+  }
+  30% {
+    transform: translateX(8px);
+  }
+  45% {
+    transform: translateX(-6px);
+  }
+  60% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  90% {
+    transform: translateX(2px);
+  }
+}
+@keyframes pin-neon {
+  0%,
+  60% {
+    border-color: #f06464;
+    box-shadow:
+      0 0 0 1px #f06464,
+      0 0 14px 3px rgba(240, 100, 100, 0.7),
+      0 0 38px 10px rgba(240, 100, 100, 0.35);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 0 rgba(240, 100, 100, 0);
+  }
+}
+.input.pin-invalid {
+  animation:
+    pin-shake 0.5s ease-in-out,
+    pin-neon 1.4s ease-out;
+}
+.pin-warning {
+  color: #f06464;
+  text-shadow: 0 0 10px rgba(240, 100, 100, 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .input.pin-invalid {
+    animation: pin-neon 1.4s ease-out;
+  }
+}
+
+/* ---- Mission Control shell (.hud) ---- */
+.hud {
+  --color-white: #ffffff;
+  --color-black: #0b0b0c;
+  color: #ffffff;
+  background-color: #0b0b0c;
+  background-image:
+    radial-gradient(70% 46% at 76% -10%, rgba(255, 204, 0, 0.045), transparent 64%),
+    radial-gradient(48% 36% at 0% 0%, rgba(255, 255, 255, 0.03), transparent 60%);
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed;
+}
+
+/* Editorial panel utility used by shared cards and panels */
+.hud-panel {
+  position: relative;
+  isolation: isolate;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #121214;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  transition: border-color 0.28s ease;
+}
+.hud-panel-hover:hover {
+  border-color: rgba(255, 204, 0, 0.55);
+}
+
+/* Telemetry gauge track */
+.gauge-track {
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+/* Legacy light utilities encountered inside dashboard pages → dark editorial equivalents. */
+.hud .bg-white,
+.hud .bg-\[\#fafcfd\] {
+  background-color: #121214;
+}
+.hud [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.hud [class*="border-white/"] {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.hud .text-black,
+.hud [class*="text-black/"] {
+  color: #ffffff;
+}
+.hud [class*="bg-[#eef2f4]"],
+.hud [class*="bg-[#f6fbfd]"] {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.hud [class*="bg-[#fff8e8]"] {
+  background-color: rgba(245, 166, 35, 0.1);
+}
+.hud [class*="text-[#6b4a05]"] {
+  color: #f2c46b;
+}
+.hud [class*="text-[#177a51]"] {
+  color: #35d6c0;
+}
+.hud [class*="text-[#8a6410]"],
+.hud [class*="text-[#8a5a00]"] {
+  color: #f5a623;
+}
+.hud [class*="text-[#b23b3b]"],
+.hud [class*="text-[#9a2f27]"] {
+  color: #f06464;
+}
+.hud [class*="border-[#b8c6ce]"] {
+  border-color: rgba(255, 204, 0, 0.35);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrolling ECG trace */
+@keyframes ecg-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100px);
+  }
+}
+.ecg-scroll {
+  animation: ecg-scroll 1.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ecg-scroll {
+    animation: none;
+  }
+}
+
+/* Daily quest mascot moods */
+@keyframes quest-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.02);
+  }
+  50% {
+    transform: translateY(-14px) scale(1.06);
+  }
+}
+@keyframes quest-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes quest-droop {
+  0%,
+  100% {
+    transform: translateY(10px) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(16px) rotate(1.5deg);
+  }
+}
+@keyframes quest-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 10px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, -16px);
+  }
+}
+@keyframes quest-sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+.quest-bounce {
+  animation: quest-bounce 0.9s ease-in-out infinite;
+}
+.quest-float {
+  animation: quest-float 3s ease-in-out infinite;
+}
+.quest-droop {
+  animation: quest-droop 4.5s ease-in-out infinite;
+}
+.quest-zzz {
+  animation: quest-zzz 2.4s ease-in-out infinite;
+}
+.quest-sparkle {
+  animation: quest-sparkle 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quest-bounce,
+  .quest-float,
+  .quest-droop,
+  .quest-zzz,
+  .quest-sparkle {
+    animation: none;
+  }
+}
+
+/* ---- Critical anomaly pop-up ---- */
+@keyframes anomaly-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(240, 100, 100, 0.55),
+      0 0 26px rgba(240, 100, 100, 0.32),
+      0 32px 90px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(240, 100, 100, 0.92),
+      0 0 54px rgba(240, 100, 100, 0.58),
+      0 32px 90px rgba(0, 0, 0, 0.55);
+  }
+}
+.anomaly-frame {
+  animation: anomaly-glow 1.9s ease-in-out infinite;
+}
+
+@keyframes anomaly-scan {
+  0% {
+    transform: translateY(-130%);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(230%);
+    opacity: 0;
+  }
+}
+.anomaly-scanline::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 38%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(240, 100, 100, 0.14) 55%,
+    rgba(53, 214, 192, 0.08) 80%,
+    transparent
+  );
+  animation: anomaly-scan 4.5s linear infinite;
+}
+
+@keyframes bp-dash {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+.bp-dash {
+  animation: bp-dash 1.1s linear infinite;
+}
+
+/* Narrow scrollbar inside the flight-surgeon drawer */
+.fs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.fs-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.fs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fs-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+}
+.fs-scroll::-webkit-scrollbar-thumb:hover {
+  background: #ffcc00;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anomaly-frame,
+  .anomaly-scanline::before,
+  .bp-dash,
+  .live-dot,
+  .hud-sweep::after {
+    animation: none;
+  }
+}

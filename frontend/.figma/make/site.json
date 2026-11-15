@@ -1,0 +1,10 @@
+{
+  "description": "Monitor astronauts’ health and track vital signs to support crew wellbeing and help mission teams make informed decisions during spaceflight.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
