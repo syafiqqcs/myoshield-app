@@ -72,6 +72,9 @@ function CrewCard({
 }) {
   const domain = DOMAINS[member.domain];
   const status = CREW_STATUS_STYLE[member.status];
+  // The commander's orbital portrait is shown in full colour; the other cards
+  // keep the desaturated NASA-portrait treatment.
+  const fullColor = member.id === "AST-01";
   return (
     <button
       type="button"
@@ -84,9 +87,17 @@ function CrewCard({
           src={CREW_PHOTOS[member.id]}
           alt={`${member.name}, ${member.role}`}
           loading="lazy"
-          className="h-full w-full object-cover grayscale contrast-[1.08] transition duration-[900ms] ease-out group-hover:scale-[1.04] group-hover:grayscale-0"
+          className={`h-full w-full object-cover object-center transition duration-[900ms] ease-out group-hover:scale-[1.04] ${
+            fullColor ? "" : "grayscale contrast-[1.08] group-hover:grayscale-0"
+          }`}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0C] via-[#0B0B0C]/10 to-transparent" />
+        <div
+          className={`pointer-events-none absolute inset-0 ${
+            fullColor
+              ? "bg-gradient-to-t from-black/80 via-transparent to-black/30"
+              : "bg-gradient-to-t from-[#0B0B0C] via-[#0B0B0C]/10 to-transparent"
+          }`}
+        />
         <span className="font-mono absolute left-3 top-3 border border-white/20 bg-[#0B0B0C]/70 px-2 py-1 text-[9px] tracking-[0.16em] text-[#D6D6D9] backdrop-blur-sm">
           {String(index + 1).padStart(2, "0")} / {member.id}
         </span>

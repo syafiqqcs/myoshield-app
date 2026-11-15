@@ -102,7 +102,7 @@ export const CREW: CrewMember[] = [
 
 /** NASA-style portrait photography used by the crew grids. */
 export const CREW_PHOTOS: Record<string, string> = {
-  "AST-01": "https://images.unsplash.com/photo-1581822261290-991b38693d1b?auto=format&fit=crop&w=900&q=80",
+  "AST-01": "/elena-vance.png",
   "AST-02": "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?auto=format&fit=crop&w=900&q=80",
   "AST-03": "https://images.unsplash.com/photo-1614313913007-2b4ae8ce32d6?auto=format&fit=crop&w=900&q=80",
   "AST-04": "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?auto=format&fit=crop&w=900&q=80",
