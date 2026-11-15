@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isCriticalAnalysis, useApp } from "../lib/store";
+import { useApp } from "../lib/store";
 import { DAILY_QUESTS, DAILY_QUESTS_EVENT, DAILY_QUESTS_KEY, dayKey } from "./DailyQuests";
 
 const TOUR_KEY = "myoshield_tour_completed";
@@ -166,18 +166,26 @@ function findEnergySection(): HTMLElement | null {
   return heading?.closest<HTMLElement>("section") ?? heading?.parentElement ?? null;
 }
 
+/** Mascot energy follows today's workout completion: none, some, or all. */
+type EnergyLevel = "low" | "partial" | "full";
+
 type QuestInfo = {
   kicker: string;
   title: string;
   body: string;
-  done: number | null;
+  done: number;
   total: number;
-  complete: boolean;
+  /** XP-weighted energy percentage, matching the "Keep Myo Energized" panel. */
+  energy: number;
+  level: EnergyLevel;
 };
 
-/** Build the post-tour mission from the quest state already stored by DailyQuests. */
-function readQuestInfo(hasAnalysis: boolean): QuestInfo {
+const TOTAL_XP = DAILY_QUESTS.reduce((sum, q) => sum + q.xp, 0);
+
+/** Build the mascot state from the daily quest state shared by DailyQuests. */
+function readQuestInfo(): QuestInfo {
   const total = DAILY_QUESTS.length;
+  const valid = new Set(DAILY_QUESTS.map((q) => q.id));
 
   let stored: { date?: string; done?: string[] } | null = null;
   try {
@@ -186,50 +194,50 @@ function readQuestInfo(hasAnalysis: boolean): QuestInfo {
     stored = null;
   }
 
-  if (stored && stored.date === dayKey()) {
-    const valid = new Set(DAILY_QUESTS.map((q) => q.id));
-    const done = Array.isArray(stored.done) ? stored.done.filter((id) => valid.has(id)) : [];
-    const next = DAILY_QUESTS.find((q) => !done.includes(q.id));
+  const doneIds =
+    stored && stored.date === dayKey() && Array.isArray(stored.done)
+      ? stored.done.filter((id) => valid.has(id))
+      : [];
 
-    if (next) {
-      return {
-        kicker: `DAILY QUEST · ${done.length}/${total}`,
-        title: next.title,
-        body: `${next.detail}. Tap to open Keep Myo Energized and log today's routine.`,
-        done: done.length,
-        total,
-        complete: false,
-      };
-    }
+  const done = doneIds.length;
+  const xp = DAILY_QUESTS.filter((q) => doneIds.includes(q.id)).reduce((n, q) => n + q.xp, 0);
+  const energy = TOTAL_XP ? Math.round((xp / TOTAL_XP) * 100) : 0;
+  const next = DAILY_QUESTS.find((q) => !doneIds.includes(q.id));
 
+  if (done === 0) {
     return {
-      kicker: "DAILY QUEST · COMPLETE",
-      title: "All quests complete",
-      body: "Today's routine is logged. Sweep the health domains for late strain signals while I recharge.",
-      done: total,
+      kicker: `DAILY QUEST · 0/${total}`,
+      title: "Myo is low on energy...",
+      body: next
+        ? `Click me to complete today's ${next.title.toLowerCase()} workout and wake Myo up.`
+        : "Click me to open today's workout routine and wake Myo up.",
+      done,
       total,
-      complete: true,
+      energy,
+      level: "low",
     };
   }
 
-  if (hasAnalysis) {
+  if (done >= total) {
     return {
-      kicker: "DAILY QUEST",
-      title: "Review health domains",
-      body: "Review Radiation & Musculoskeletal health domains before the next status sync.",
-      done: null,
+      kicker: "DAILY QUEST · COMPLETE",
+      title: "Myo is 100% energized and mission-ready!",
+      body: "Every daily workout is logged. Sweep the health domains while I recharge for tomorrow.",
+      done: total,
       total,
-      complete: false,
+      energy: 100,
+      level: "full",
     };
   }
 
   return {
-    kicker: "DAILY QUEST",
-    title: "Run 4-model diagnostics",
-    body: "Upload orbital telemetry CSV to score all four health domains and surface cross-system strain.",
-    done: null,
+    kicker: `DAILY QUEST · ${done}/${total}`,
+    title: `Nice! ${done}/${total} workouts done—keep going to fully energize Myo!`,
+    body: next ? `Next up: ${next.title} · ${next.detail}.` : "Keep going to fully energize Myo!",
+    done,
     total,
-    complete: false,
+    energy,
+    level: "partial",
   };
 }
 
@@ -240,14 +248,13 @@ function clearTourHighlight() {
 }
 
 export default function CompanionMascot({ suppressed = false }: { suppressed?: boolean }) {
-  const { latest, notify, anomalyOpen, reportRequest } = useApp();
-  const [quest, setQuest] = useState<QuestInfo>(() => readQuestInfo(!!latest));
+  const { notify, anomalyOpen, reportRequest } = useApp();
+  const [quest, setQuest] = useState<QuestInfo>(readQuestInfo);
   const [completed, setCompleted] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [steps, setSteps] = useState<TourStep[]>(FALLBACK_STEPS);
   const [step, setStep] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const pulseTimer = useRef<number | null>(null);
 
   /* First visit: discover every section on the page, then reveal the flight guide. */
@@ -271,9 +278,9 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
     return () => window.clearTimeout(timer);
   }, []);
 
-  /* Keep the Daily Quest bubble in sync with the quest panel and other tabs. */
+  /* Keep the mascot's energy state in sync with the quest panel and other tabs. */
   useEffect(() => {
-    const sync = () => setQuest(readQuestInfo(!!latest));
+    const sync = () => setQuest(readQuestInfo());
     sync();
     window.addEventListener(DAILY_QUESTS_EVENT, sync);
     window.addEventListener("storage", sync);
@@ -283,7 +290,7 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
       window.removeEventListener("storage", sync);
       window.removeEventListener("focus", sync);
     };
-  }, [latest]);
+  }, []);
 
   /* Scroll to the active tour step and ring the matching section. */
   useEffect(() => {
@@ -371,13 +378,18 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
 
   const current = steps[step] ?? steps[0] ?? FALLBACK_STEPS[0];
   const lastStep = step >= steps.length - 1;
-  const progress = quest.total ? Math.round(((quest.done ?? 0) / quest.total) * 100) : 0;
+  const progress = quest.energy;
 
   // Keep the companion clear of the flight-surgeon drawer and modal dialogs.
   if (suppressed || anomalyOpen || reportRequest) return null;
 
-  const alertActive = !!latest && isCriticalAnalysis(latest.result);
-  const awake = tourActive || hovered || alertActive;
+  const energized = quest.level === "full";
+  const energySummary =
+    quest.level === "full"
+      ? "Myo is fully energized"
+      : quest.level === "partial"
+        ? `Myo is charging: ${quest.done} of ${quest.total} workouts done`
+        : "Myo is low on energy: no workouts completed";
 
   return (
     <div className="no-print pointer-events-none fixed bottom-0 right-6 z-50">
@@ -455,12 +467,17 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
             aria-live="polite"
             title="Jump to Keep Myo Energized"
             onClick={jumpToEnergy}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            className="companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] right-6 w-[calc(100vw-5rem)] max-w-[336px] cursor-pointer rounded-[14px] border border-[#FFCC00]/30 bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition hover:border-[#FFCC00]/60 sm:bottom-[11.5rem]"
+            className={`companion-bubble-in pointer-events-auto absolute bottom-[10.5rem] right-6 w-[calc(100vw-5rem)] max-w-[336px] cursor-pointer rounded-[14px] border bg-[#0E0E10]/95 p-4 text-left backdrop-blur-xl transition sm:bottom-[11.5rem] ${
+              energized
+                ? "border-[#FFCC00]/60"
+                : quest.level === "partial"
+                  ? "border-[#FFCC00]/40"
+                  : "border-[#FFCC00]/25 hover:border-[#FFCC00]/45"
+            }`}
             style={{
-              boxShadow:
-                "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+              boxShadow: energized
+                ? "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.24), 0 0 44px rgba(255,204,0,0.16), inset 0 1px 0 rgba(255,255,255,0.05)"
+                : "0 24px 70px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,204,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
             }}
           >
             <BubbleTail />
@@ -488,23 +505,25 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
               </h3>
               <p className="mt-2 text-[12.5px] leading-[1.55] text-[#C9C9CE]">{quest.body}</p>
 
-              {quest.done !== null && (
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-white/[0.09]">
-                    <div
-                      className="h-full rounded-full bg-[#FFCC00] transition-[width] duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <span className="font-mono text-[9px] tabular-nums text-[#6E6E73]">
-                    {quest.done}/{quest.total}
-                  </span>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-white/[0.09]">
+                  <div
+                    className="h-full rounded-full bg-[#FFCC00] transition-[width] duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
-              )}
+                <span className="font-mono text-[9px] tabular-nums text-[#6E6E73]">
+                  {quest.done}/{quest.total} · {quest.energy}%
+                </span>
+              </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
                 <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-[#6E6E73]">
-                  {quest.complete ? "Mission logged" : "Tap to navigate"}
+                  {energized
+                    ? "Mission logged"
+                    : quest.level === "partial"
+                      ? "Charging up"
+                      : "Low energy · tap to train"}
                 </span>
                 <button
                   type="button"
@@ -552,23 +571,25 @@ export default function CompanionMascot({ suppressed = false }: { suppressed?: b
           onClick={() => {
             if (!tourActive) jumpToEnergy();
           }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          onFocus={() => setHovered(true)}
-          onBlur={() => setHovered(false)}
           aria-label={
             tourActive
               ? "MYO Space Bear guided tour in progress"
-              : "Ask MYO Space Bear to open Keep Myo Energized"
+              : `${energySummary}. Open Keep Myo Energized.`
           }
-          title={tourActive ? "MYO · guided tour" : "Jump to Keep Myo Energized"}
+          title={
+            tourActive
+              ? "MYO · guided tour"
+              : `MYO · ${quest.energy}% energy · Jump to Keep Myo Energized`
+          }
           className="group pointer-events-auto relative block h-[178px] w-[128px] select-none rounded-2xl focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FFCC00]/70 sm:h-[196px] sm:w-[140px]"
         >
           <span
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-[16%] h-24 w-24 -translate-x-1/2 rounded-full bg-[#FFCC00]/10 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100 group-focus-visible:opacity-100"
+            className={`pointer-events-none absolute left-1/2 top-[16%] h-24 w-24 -translate-x-1/2 rounded-full bg-[#FFCC00]/10 blur-2xl transition duration-500 group-focus-visible:opacity-100 ${
+              energized ? "opacity-100" : quest.level === "partial" ? "opacity-60" : "opacity-0"
+            }`}
           />
-          <SpaceBearSvg awake={awake} />
+          <SpaceBearSvg level={quest.level} />
         </button>
       </div>
     </div>
@@ -585,11 +606,16 @@ function BubbleTail() {
 }
 
 /** High-detail 2.5D Space Bear Astronaut matching the interactive Myo3D mascot. */
-function SpaceBearSvg({ awake }: { awake: boolean }) {
+function SpaceBearSvg({ level }: { level: EnergyLevel }) {
+  const awake = level !== "low";
+  const energized = level === "full";
+
   return (
     <svg
       viewBox="0 0 200 288"
-      className={`space-bear-svg relative z-10 h-full w-full ${awake ? "is-awake" : "is-sleepy"}`}
+      className={`space-bear-svg relative z-10 h-full w-full ${awake ? "is-awake" : "is-sleepy"} ${
+        energized ? "is-energized" : ""
+      }`}
       aria-hidden
     >
       <defs>
@@ -637,7 +663,15 @@ function SpaceBearSvg({ awake }: { awake: boolean }) {
           <stop offset="65%" stopColor="#000000" stopOpacity="0.25" />
           <stop offset="100%" stopColor="#000000" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id="sb-aura" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFCC00" stopOpacity="0.3" />
+          <stop offset="58%" stopColor="#FFCC00" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#FFCC00" stopOpacity="0" />
+        </radialGradient>
       </defs>
+
+      {/* Fully energized: a warm mission-ready aura pulses behind the bear. */}
+      {energized && <circle className="sb-aura" cx="100" cy="118" r="94" fill="url(#sb-aura)" />}
 
       {/* Ground shadow keeps the bear planted on the viewport edge. */}
       <ellipse
@@ -998,15 +1032,27 @@ function SpaceBearSvg({ awake }: { awake: boolean }) {
           <ellipse cx="69" cy="113" rx="9.5" ry="6" fill="#EE8B86" fillOpacity="0.55" />
           <ellipse cx="131" cy="113" rx="9.5" ry="6" fill="#EE8B86" fillOpacity="0.55" />
 
-          {/* Eyes: attentive during the tour, heavy-lidded when idle */}
+          {/* Eyes: driven by today's workout energy, not pointer hover. */}
           <g
             className="sb-awake-eyes"
             style={{ opacity: awake ? 1 : 0, transition: "opacity 220ms ease" }}
           >
-            <ellipse cx="82" cy="95" rx="7.5" ry="8.5" fill="#2B1B12" />
-            <ellipse cx="118" cy="95" rx="7.5" ry="8.5" fill="#2B1B12" />
-            <circle cx="84.5" cy="92" r="2.4" fill="#FFFFFF" />
-            <circle cx="120.5" cy="92" r="2.4" fill="#FFFFFF" />
+            <ellipse
+              cx="82"
+              cy="95"
+              rx={energized ? 8.4 : 7.5}
+              ry={energized ? 9.4 : 8.5}
+              fill="#2B1B12"
+            />
+            <ellipse
+              cx="118"
+              cy="95"
+              rx={energized ? 8.4 : 7.5}
+              ry={energized ? 9.4 : 8.5}
+              fill="#2B1B12"
+            />
+            <circle cx="84.5" cy="92" r={energized ? 3 : 2.4} fill="#FFFFFF" />
+            <circle cx="120.5" cy="92" r={energized ? 3 : 2.4} fill="#FFFFFF" />
             <circle cx="79.5" cy="98.5" r="1.1" fill="#FFFFFF" fillOpacity="0.7" />
             <circle cx="115.5" cy="98.5" r="1.1" fill="#FFFFFF" fillOpacity="0.7" />
             <path
@@ -1016,6 +1062,12 @@ function SpaceBearSvg({ awake }: { awake: boolean }) {
               strokeWidth="1.9"
               strokeLinecap="round"
             />
+            {energized && (
+              <g className="sb-energy-sparkle" fill="#FFF3B0">
+                <path d="m70 88 1.1 2.9 2.9 1.1-2.9 1.1L70 96l-1.1-2.9-2.9-1.1 2.9-1.1Z" />
+                <path d="m130 88 1.1 2.9 2.9 1.1-2.9 1.1L130 96l-1.1-2.9-2.9-1.1 2.9-1.1Z" />
+              </g>
+            )}
           </g>
           <g
             className="sb-sleepy-eyes"
@@ -1154,8 +1206,8 @@ function SpaceBearSvg({ awake }: { awake: boolean }) {
           strokeWidth="1"
         />
 
-        {/* Idle Zzz particles */}
-        {!awake && (
+        {/* Sleepy only: floating Zzz particles while today's workouts are missing. */}
+        {level === "low" && (
           <g className="space-bear-zzz">
             <g className="sb-zzz">
               <text
