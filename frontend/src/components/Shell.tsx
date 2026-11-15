@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useApp, type Route } from "../lib/store";
 import { Badge, Icon, Logo, type IconName } from "./ui";
+import AudioAlertToggle from "./AudioAlertToggle";
 
 type Item = { r: Route; label: string; icon: IconName; roles?: string[] };
 export const NAV: Item[] = [
@@ -222,6 +223,7 @@ export default function Shell({ children }: { children: ReactNode }) {
               <Icon name="database" size={11} />
               Source: {subj?.type === "Demonstration subject" ? "Simulated demo" : subj?.study}
             </Badge>
+            <AudioAlertToggle />
             <div className="relative">
               <button
                 className="relative grid h-9 w-9 place-items-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[#121214]/80 transition hover:border-[#FFCC00]/45"

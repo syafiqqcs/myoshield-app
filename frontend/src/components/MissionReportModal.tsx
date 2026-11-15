@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useApp } from "../lib/store";
+import { cancelAlertAudio, triggerAnalysisAlert } from "../lib/audioAlerts";
 import {
   buildMissionReport,
   classificationToneFor,
@@ -150,6 +151,12 @@ function DomainPanel({ domain }: { domain: ReportDomain }) {
 export default function MissionReportModal() {
   const { reportRequest, closeReport, subjects, latestBySubject, notify } = useApp();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const lastAlert = useRef<string | null>(null);
+
+  const handleClose = useCallback(() => {
+    cancelAlertAudio();
+    closeReport();
+  }, [closeReport]);
 
   const snapshot = reportRequest
     ? (reportRequest.snapshot ?? latestBySubject[reportRequest.subjectId] ?? null)
@@ -164,10 +171,25 @@ export default function MissionReportModal() {
     });
   }, [reportRequest, snapshot, subjects]);
 
+  // A live report carrying a warning/critical classification gets the same
+  // spacecraft chime + spoken alert as the rescue overlay. Baseline reports
+  // and nominal results stay silent.
+  useEffect(() => {
+    if (!reportRequest || !snapshot) {
+      lastAlert.current = null;
+      return;
+    }
+    const result = snapshot.result;
+    const key = `${snapshot.at}|${result.analysis_id}|${result.status}|${result.interaction_type}`;
+    if (lastAlert.current === key) return;
+    lastAlert.current = key;
+    triggerAnalysisAlert(result);
+  }, [reportRequest, snapshot]);
+
   useEffect(() => {
     if (!reportRequest) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeReport();
+      if (event.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
@@ -178,8 +200,9 @@ export default function MissionReportModal() {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus?.({ preventScroll: true });
+      cancelAlertAudio();
     };
-  }, [reportRequest, closeReport]);
+  }, [reportRequest, handleClose]);
 
   if (!reportRequest || !report) return null;
 
@@ -194,7 +217,7 @@ export default function MissionReportModal() {
       <button
         type="button"
         aria-label="Dismiss mission report preview"
-        onClick={closeReport}
+        onClick={handleClose}
         className="no-print absolute inset-0 bg-[#000000]/88 backdrop-blur-md"
       />
 
@@ -263,7 +286,7 @@ export default function MissionReportModal() {
               </Btn>
               <button
                 type="button"
-                onClick={closeReport}
+                onClick={handleClose}
                 aria-label="Close mission report"
                 className="grid h-10 w-10 place-items-center rounded-[2px] border border-white/[0.08] bg-[#121214] text-[#8E8E93] transition hover:border-[#FFCC00]/60 hover:text-[#FFCC00]"
               >

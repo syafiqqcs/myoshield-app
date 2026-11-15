@@ -14,6 +14,7 @@ import DatasetUploadBar from "./DatasetUploadBar";
 import FlightSurgeonChat from "./FlightSurgeonChat";
 import AnomalyPopupModal from "./AnomalyPopupModal";
 import MissionReportModal from "./MissionReportModal";
+import AudioAlertToggle from "./AudioAlertToggle";
 import { Icon, Logo } from "./ui";
 import type {
   ChatAstronaut,
@@ -791,6 +792,7 @@ export default function OnePage({ children }: { children?: ReactNode }) {
                 </option>
               ))}
             </select>
+            <AudioAlertToggle />
             <button
               onClick={() => setChatOpen(true)}
               className="font-mono inline-flex shrink-0 items-center gap-2 rounded-[2px] border border-[#FFCC00] px-3 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.12em] transition hover:brightness-110"

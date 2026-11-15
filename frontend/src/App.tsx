@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { AppProvider, useApp } from "./lib/store";
+import { installAudioUnlock } from "./lib/audioAlerts";
 import OnePage from "./components/OnePage";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -31,6 +33,10 @@ function Router() {
 }
 
 export default function App() {
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
+
   return (
     <AppProvider>
       <Router />

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DomainKey, UploadAnalysis } from "../lib/api";
+import { cancelAlertAudio, triggerAnalysisAlert } from "../lib/audioAlerts";
 
 const DOMAIN_META: Record<string, { label: string; short: string; color: string; module: string }> =
   {
@@ -112,15 +113,35 @@ export default function AnomalyPopupModal({
   onClose: () => void;
 }) {
   const [checked, setChecked] = useState<boolean[]>([false, false, false]);
+  const lastAlert = useRef<string | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const handleClose = useCallback(() => {
+    cancelAlertAudio();
+    onCloseRef.current();
+  }, []);
 
   useEffect(() => {
     if (open) setChecked([false, false, false]);
   }, [open, result?.analysis_id]);
 
+  // Spacecraft chime + spoken warning whenever a non-nominal rescue overlay opens.
+  useEffect(() => {
+    if (!open || !result) {
+      lastAlert.current = null;
+      return;
+    }
+    const key = `${result.analysis_id}|${result.status}|${result.interaction_type}|${result.integrated_strain_index}`;
+    if (lastAlert.current === key) return;
+    lastAlert.current = key;
+    triggerAnalysisAlert(result);
+  }, [open, result]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
@@ -128,8 +149,9 @@ export default function AnomalyPopupModal({
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
+      cancelAlertAudio();
     };
-  }, [open, onClose]);
+  }, [open, handleClose]);
 
   if (!open || !result) return null;
 
@@ -161,7 +183,7 @@ export default function AnomalyPopupModal({
       <button
         type="button"
         aria-label="Dismiss anomaly overlay"
-        onClick={onClose}
+        onClick={handleClose}
         className="absolute inset-0 bg-[#000000]/85 backdrop-blur-md"
       />
 
@@ -217,7 +239,7 @@ export default function AnomalyPopupModal({
               </span>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 aria-label="Close anomaly modal"
                 className="grid h-9 w-9 place-items-center rounded-[2px] border border-white/[0.08] bg-[#121214] text-[#8E8E93] transition hover:border-[#F06464]/60 hover:text-[#F06464]"
               >
@@ -403,7 +425,7 @@ export default function AnomalyPopupModal({
               </div>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="font-mono flex w-full items-center justify-center gap-2 rounded-[2px] border border-[#F06464] bg-[#F06464] px-4 py-3 text-[10px] font-bold tracking-[0.14em] text-[#190707] transition hover:bg-[#ff7c7c]"
               >
                 ACKNOWLEDGE &amp; DISMISS <CheckIcon />
